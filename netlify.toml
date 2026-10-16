@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# O Identity responde em /.netlify/identity e as Functions em
+# /.netlify/functions — ambos no mesmo domínio do site, de modo que o
+# cookie de sessão (nf_jwt) acompanha as chamadas automaticamente.
+#
+# Este site é independente do Bunpou Lab: outro site no Netlify, outra
+# instância de Identity, outra tabela (katsuyou_progress). Publicar um
+# jamais toca no progresso do outro.

@@ -145,6 +145,15 @@ function askingBlock(app, session, cur) {
       enterkeyhint: 'send',
       'aria-label': `Escreva a ${FORM_LABEL[cur.form]} de ${cur.prompt}`,
       placeholder: 'resposta em japonês',
+      /* O campo é reconstruído a cada render; o texto já digitado vem do
+         rascunho da sessão, não do DOM anterior. Sem isso, qualquer
+         render — o status da conta virando "Sincronizado", por exemplo —
+         devolvia um campo vazio no meio da resposta. */
+      value: session.answerDraft || '',
+      /* Espelha cada tecla no estado transitório da sessão, como o
+         `oninput="V.ans=this.value"` do Bunpou Lab. Não redesenha nada e
+         não toca no store: digitar não gera save() nem sincronização. */
+      oninput: e => { session.answerDraft = e.target.value; },
       onkeydown: e => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -158,7 +167,11 @@ function askingBlock(app, session, cur) {
     box.appendChild(input);
 
     const submit = () => {
+      /* O DOM é a fonte autoritativa no instante do envio: durante a
+         composição do IME alguns navegadores não emitem `input`, e o
+         rascunho pode estar um passo atrás. Sincroniza e envia. */
       const val = input.value;
+      session.answerDraft = val;
       if (!val.trim()) { input.focus(); return; }
       session.submit(val);
       app.render();
@@ -168,8 +181,17 @@ function askingBlock(app, session, cur) {
       h('button', { class: 'btn btn-primary btn-lg btn-block', onclick: submit }, 'Responder')
     ));
 
-    /* Foco automático (§40), sem rolar a página no celular. */
-    queueMicrotask(() => { try { input.focus({ preventScroll: true }); } catch { input.focus(); } });
+    /* Foco automático (§40), sem rolar a página no celular. Depois de um
+       render no meio da digitação o cursor volta para o fim do texto —
+       mesmo tratamento do Bunpou Lab — para que dê para continuar a
+       escrever sem clicar no campo de novo. */
+    queueMicrotask(() => {
+      try { input.focus({ preventScroll: true }); } catch { input.focus(); }
+      try {
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+      } catch { /* alguns tipos de input não aceitam seleção */ }
+    });
   }
 
   /* dicas já reveladas */

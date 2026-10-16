@@ -46,6 +46,16 @@ export class Session {
     this.phase = 'idle';       // idle | asking | feedback | done
     this.hintsShown = 0;
     this.lastResult = null;
+    /* Rascunho da resposta em digitação. É estado TRANSITÓRIO da
+       atividade — o equivalente do V.ans do Bunpou Lab —, no mesmo lugar
+       e com o mesmo ciclo de vida de `hintsShown`. Existe para que a
+       resposta parcial sobreviva a um re-render (status de sincronização,
+       dica, tema, overtime) sem morar no DOM.
+
+       NÃO é progresso pedagógico: `saveResume()` enumera os campos que
+       persiste e este não está entre eles, então ele nunca entra no
+       localStorage, no backup nem no snapshot enviado ao Netlify. */
+    this.answerDraft = '';
     /* Uma sessão só pode ser gravada no histórico uma vez, por mais
        vezes que a tela de resultado seja renderizada. */
     this.recorded = false;
@@ -105,6 +115,7 @@ export class Session {
     this.current = null;
     this.lastResult = null;
     this.hintsShown = 0;
+    this.answerDraft = '';
     this.phase = 'done';
   }
 
@@ -127,6 +138,8 @@ export class Session {
     this.phase = 'asking';
     this.hintsShown = 0;
     this.lastResult = null;
+    /* O rascunho não vaza de uma questão para outra. */
+    this.answerDraft = '';
     this.saveResume();
     return this.current;
   }

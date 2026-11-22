@@ -6,9 +6,10 @@
    propósito; o de acerto é curto de propósito.
    =================================================================== */
 
-import { h, formVars } from './dom.js';
+import { h, formVars, jpVerb, jpText } from './dom.js';
 import { FORM_SHORT, FORM_LABEL, GROUP_LABEL } from '../conjugation/rules.js';
 import { getState } from '../progress/store.js';
+import { rubyParts, kanjiSpelling } from '../conjugation/furigana.js';
 
 export function renderPractice(app, session) {
   const root = h('div', { class: 'wrap' });
@@ -29,7 +30,7 @@ export function renderPractice(app, session) {
   const card = h('div', { class: 'qcard' });
 
   /* ---- pergunta ---- */
-  card.appendChild(h('p', { class: 'q-prompt mincho', text: cur.prompt }));
+  card.appendChild(h('p', { class: 'q-prompt mincho' }, jpVerb(cur.verbId, cur.prompt)));
   card.appendChild(h('p', { class: 'q-meaning', text: cur.meaning }));
 
   const ask = h('div', { class: 'q-ask' });
@@ -38,7 +39,7 @@ export function renderPractice(app, session) {
     ask.appendChild(h('div', { class: 'val', style: { '--wash': 'var(--card-2)', '--fc': 'var(--ink)' }, text: 'Qual é o grupo?' }));
   } else {
     ask.appendChild(h('div', { class: 'lbl', text: 'Forma pedida' }));
-    ask.appendChild(h('div', { class: 'val', style: formVars(cur.form), text: FORM_LABEL[cur.form] }));
+    ask.appendChild(h('div', { class: 'val', style: formVars(cur.form) }, jpText(FORM_LABEL[cur.form])));
   }
   card.appendChild(ask);
 
@@ -56,9 +57,10 @@ export function renderPractice(app, session) {
 
   root.appendChild(card);
 
-  root.appendChild(h('div', { class: 'row row-end', style: { marginTop: '14px' } },
+  /* Saída da sessão: o mesmo botão fantasma, fora do cartão, do Bunpou Lab */
+  root.appendChild(h('div', { class: 'row', style: { marginTop: '18px', justifyContent: 'center' } },
     h('button', {
-      class: 'btn-link',
+      class: 'btn btn-ghost',
       onclick: () => app.endSession(session)
     }, 'Encerrar sessão')
   ));
@@ -153,7 +155,13 @@ function askingBlock(app, session, cur) {
       /* Espelha cada tecla no estado transitório da sessão, como o
          `oninput="V.ans=this.value"` do Bunpou Lab. Não redesenha nada e
          não toca no store: digitar não gera save() nem sincronização. */
-      oninput: e => { session.answerDraft = e.target.value; },
+      oninput: e => {
+        session.answerDraft = e.target.value;
+        /* o texto digitado sobrevive a um fechamento da aba (gravação local,
+           com pausa curta para não gravar a cada tecla) */
+        clearTimeout(session._draftT);
+        session._draftT = setTimeout(() => session.saveQuiet?.(), 400);
+      },
       onkeydown: e => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -232,20 +240,11 @@ function feedbackBlock(app, session, res) {
   if (res.dontKnow) head.appendChild(h('span', { class: 'tag', text: 'não sei' }));
   fb.appendChild(head);
 
-  /* ---- resposta ---- */
-  if (res.form === 'group') {
-    fb.appendChild(h('p', { class: 'fb-answer' },
-      h('span', { text: res.verb.masu }),
-      h('span', { class: 'arrow', text: '→' }),
-      h('span', { text: GROUP_LABEL[res.groupAnswer] })
-    ));
-  } else {
-    fb.appendChild(h('p', { class: 'fb-answer' },
-      h('span', { text: res.verb.masu }),
-      h('span', { class: 'arrow', text: '→' }),
-      h('span', { text: res.explanation.answer })
-    ));
-  }
+  /* ---- resposta: o que foi digitado × o que era esperado ----
+     “Sua resposta” mostra o texto EXATAMENTE como foi digitado (sem a
+     normalização interna), com espaços preservados. Só ganha furigana se
+     ele já está escrito na grafia em kanji que a tela ensina. */
+  fb.appendChild(answerLines(res));
 
   /* ---- acerto: curto, para não quebrar o ritmo (§19) ---- */
   if (ok) {
@@ -261,8 +260,8 @@ function feedbackBlock(app, session, res) {
 
     if (res.diagnosis) {
       fb.appendChild(h('p', { class: 'fb-diag' },
-        h('span', { class: 'lead', text: res.diagnosis.message }),
-        res.diagnosis.detail ? h('span', { class: 'det', text: res.diagnosis.detail }) : null
+        h('span', { class: 'lead' }, jpText(res.diagnosis.message)),
+        res.diagnosis.detail ? h('span', { class: 'det' }, jpText(res.diagnosis.detail)) : null
       ));
     }
 
@@ -307,32 +306,76 @@ function feedbackBlock(app, session, res) {
 }
 
 /* ------------------------------------------------------------------ */
+function typedNode(res) {
+  const raw = String(res.given ?? '');
+  if (res.form !== 'group') {
+    const canonical = res.verb[res.form];
+    const spelled = kanjiSpelling(res.verb.id, canonical);
+    /* digitou a grafia em kanji: mostra a leitura por cima, mesmo texto */
+    if (spelled && raw === spelled) return jpVerb(res.verb.id, canonical, { 'data-typed': '' });
+  }
+  return h('span', { class: 'jp typed', 'data-typed': '', text: raw });
+}
+
+function answerLines(res) {
+  const dl = h('dl', { class: 'fb-lines' });
+  const row = (label, node, cls) => {
+    dl.appendChild(h('dt', { text: label }));
+    dl.appendChild(h('dd', { class: cls || '' }, node));
+  };
+  const isGroup = res.form === 'group';
+  const expected = isGroup
+    ? h('span', { text: GROUP_LABEL[res.groupAnswer] })
+    : h('span', {}, jpVerb(res.verb.id, res.verb.masu), h('span', { class: 'arrow', text: ' → ' }), jpVerb(res.verb.id, res.explanation.answer));
+
+  if (res.dontKnow) {
+    row('Sua resposta', h('span', { class: 'muted', text: '“Não sei”' }), 'none');
+    row('Resposta correta', expected, 'right');
+  } else if (res.blank) {
+    row('Sua resposta', h('span', { class: 'muted', text: '(em branco)' }), 'none');
+    row('Resposta correta', expected, 'right');
+  } else if (res.correct) {
+    row('Sua resposta', isGroup ? h('span', { text: GROUP_LABEL[Number(String(res.given).replace(/\D/g, ''))] || res.given }) : typedNode(res), 'right');
+    /* grafia diferente, mas aceita: mostra também a forma esperada */
+    if (res.variant) {
+      row('Forma esperada', expected, 'right');
+      dl.appendChild(h('dd', { class: 'note', text: 'Grafia diferente, mas aceita.' }));
+    } else if (!isGroup) {
+      row('Verbo', h('span', {}, jpVerb(res.verb.id, res.verb.masu), h('span', { class: 'arrow', text: ' → ' }), jpVerb(res.verb.id, res.explanation.answer)), 'ctx');
+    }
+  } else {
+    row('Sua resposta', isGroup ? h('span', { text: GROUP_LABEL[Number(String(res.given).replace(/\D/g, ''))] || res.given }) : typedNode(res), 'wrong');
+    row('Resposta correta', expected, 'right');
+  }
+  return dl;
+}
+
 export function explanationBlock(ex) {
   const box = h('div');
 
   const steps = h('div', { class: 'steps' });
   steps.appendChild(h('div', { class: 'cap', text: 'Como chegar' }));
   for (const s of ex.steps) {
-    if (s.note) steps.appendChild(h('div', { class: 'step-note', text: s.note }));
-    if (s.value) steps.appendChild(h('div', { class: 'step-val mincho', text: s.value }));
+    if (s.note) steps.appendChild(h('div', { class: 'step-note' }, jpText(s.note)));
+    if (s.value) steps.appendChild(h('div', { class: 'step-val mincho' }, rubyParts(ex.verb.id, s.value) ? jpVerb(ex.verb.id, s.value) : jpText(s.value)));
   }
   box.appendChild(steps);
 
-  box.appendChild(h('div', { class: 'rule-line', text: `Regra: ${ex.rule}` }));
+  box.appendChild(h('div', { class: 'rule-line' }, 'Regra: ', ...jpText(ex.rule)));
 
   /* Quando a exceção JÁ É a regra do verbo (いきます), repetir a mesma
      frase em duas caixas só ocupa espaço. */
   if (ex.exception && ex.exception.rule !== ex.rule) {
-    box.appendChild(h('div', { class: 'exc-line', text: `Atenção: ${ex.exception.rule}` }));
+    box.appendChild(h('div', { class: 'exc-line' }, 'Atenção: ', ...jpText(ex.exception.rule)));
   }
 
   /* §24 — deixar explícita a relação て → た. */
   if (ex.relation) {
     box.appendChild(h('p', { class: 'rel-line' },
       'Mesma base da forma て: ',
-      h('span', { class: 'jp', text: ex.relation.te }),
+      jpVerb(ex.verb.id, ex.relation.te),
       ' → ',
-      h('span', { class: 'jp', text: ex.relation.ta }),
+      jpVerb(ex.verb.id, ex.relation.ta),
       ` （${ex.relation.swap}）`
     ));
   }
@@ -341,14 +384,14 @@ export function explanationBlock(ex) {
   if (ex.derivedFrom) {
     box.appendChild(h('p', { class: 'rel-line' },
       `Vem da ${FORM_LABEL[ex.derivedFrom.form]}: `,
-      h('span', { class: 'jp', text: ex.derivedFrom.value }),
+      jpVerb(ex.verb.id, ex.derivedFrom.value),
       ' → ',
-      h('span', { class: 'jp', text: ex.answer }),
+      jpVerb(ex.verb.id, ex.answer),
       ` （${ex.derivedFrom.swap}）`
     ));
   }
 
-  if (ex.note) box.appendChild(h('p', { class: 'rel-line', text: ex.note }));
+  if (ex.note) box.appendChild(h('p', { class: 'rel-line' }, jpText(ex.note)));
 
   const src = [ex.source, ...(ex.sourceExtra || [])].join(' · também ');
   box.appendChild(h('p', { class: 'src-line', text: src }));
@@ -383,15 +426,21 @@ export function renderEnd(app, session) {
   const card = h('div', { class: 'card pad' });
   card.appendChild(h('div', { class: 'score' },
     h('b', { class: 'mincho', text: `${s.correct} / ${s.answered}` }),
-    h('span', { text: 'respostas corretas' })
+    h('span', { text: 'respostas corretas na primeira tentativa' })
   ));
+  /* Reforços (itens errados reapresentados na sessão) aparecem à parte:
+     não mudam a nota da primeira tentativa. */
+  if (s.reinforced) {
+    card.appendChild(h('p', { class: 'small muted', style: { margin: '8px 0 0', textAlign: 'center' },
+      text: `Reforço: ${s.reinforcedOk} de ${s.reinforced} ${s.reinforced === 1 ? 'item errado acertado' : 'itens errados acertados'} ao voltar nesta sessão.` }));
+  }
 
   if (Object.keys(s.perForm).length) {
     const list = h('div', { style: { marginTop: '16px' } });
     for (const [form, v] of Object.entries(s.perForm)) {
       const label = form === 'group' ? 'Grupos' : FORM_LABEL[form];
       list.appendChild(h('div', { class: 'stat-row', style: form === 'group' ? {} : formVars(form) },
-        h('span', { class: 'stat-name', text: label }),
+        h('span', { class: 'stat-name' }, jpText(label)),
         h('div', { class: 'stat-bar' }, h('i', { style: { width: `${v.seen ? (v.right / v.seen) * 100 : 0}%` } })),
         h('span', { class: 'stat-val', text: `${v.right}/${v.seen}` })
       ));
@@ -407,7 +456,7 @@ export function renderEnd(app, session) {
     wrong.forEach(w => {
       const verb = app.verbById(w.verbId);
       rev.appendChild(h('p', { style: { margin: '0 0 6px', fontSize: '14.5px' } },
-        h('span', { class: 'jp', text: verb.masu }),
+        jpVerb(verb.id, verb.masu),
         h('span', { class: 'muted', text: ' × ' }),
         h('span', { text: w.form === 'group' ? 'grupo' : FORM_SHORT[w.form] })
       ));

@@ -2,82 +2,103 @@
    活用ラボ — tela inicial (§17) e seletores de sessão.
    =================================================================== */
 
-import { h, formVars, backRow } from './dom.js';
+import { h, formVars, backRow, jpText, sakuraFlower, SAKURA_BRANCH, EXT_ICON, BUNPOU_URL } from './dom.js';
 import { FORMS, FORM_LABEL, FORM_SHORT, GROUP_LABEL } from '../conjugation/rules.js';
-import { getState, overallCounts, updateSettings } from '../progress/store.js';
+import { getState, overallCounts, updateSettings, getPair } from '../progress/store.js';
+import { allPairs, pairCategory } from '../practice/scheduler.js';
 import { VERB_COUNT } from '../data/verbs.js';
 
 export function renderHome(app) {
   const s = getState();
   const counts = overallCounts();
-  const root = h('div', { class: 'wrap' });
+  const root = h('div', { class: 'wrap home' });
 
-  root.appendChild(h('h1', { class: 'page-title', text: 'Treinar conjugação' }));
-  root.appendChild(h('p', { class: 'page-sub', text: subtitle(s, counts) }));
+  /* ---- abertura ---- */
+  root.appendChild(h('section', { class: 'hero', 'aria-labelledby': 'h-home' },
+    h('div', { class: 'hero-txt' },
+      h('p', { class: 'eyebrow', html: `${sakuraFlower('eyebrow-flower')}<ruby>活用<rt>かつよう</rt></ruby>ラボ · Katsuyou Lab` }),
+      h('h1', { class: 'page-title mincho', id: 'h-home', text: 'Treinar conjugação' }),
+      h('p', { class: 'lead', text: subtitle(s, counts) })
+    ),
+    h('div', { class: 'hero-art', 'aria-hidden': 'true', html: SAKURA_BRANCH })
+  ));
 
-  const menu = h('div', { class: 'menu' });
+  /* ---- praticar: um destaque (continuar ou sessão mista) + modos ---- */
+  root.appendChild(h('h2', { class: 'h-sec', text: 'Praticar' }));
+  if (app.flash) root.appendChild(h('p', { class: 'notice', role: 'status', text: app.flash }));
+  const card0 = resumeCard(app, s.resume);
+  if (card0) root.appendChild(card0);
+  const lead = { title: 'Sessão mista', k: '混',
+    desc: 'Todas as formas e grupos, em ordem imprevisível: o que é novo, o que você errou e o que pede revisão.',
+    onclick: () => app.go('setup', { mode: 'mixed' }) };
+  root.appendChild(h('button', { class: 'session-card', onclick: lead.onclick },
+    h('span', { class: 'session-k mincho', 'aria-hidden': 'true', text: lead.k }),
+    h('span', { class: 'session-txt' },
+      h('b', { text: lead.title }),
+      h('span', { text: lead.desc })
+    ),
+    h('span', { class: 'session-go', 'aria-hidden': 'true', text: '→' })
+  ));
 
-  if (s.resume?.queue?.length) {
-    menu.appendChild(card({
-      title: 'Continuar treino',
-      desc: `Retomar de onde parou — ${s.resume.queue.length} ${s.resume.queue.length === 1 ? 'questão restante' : 'questões restantes'}.`,
-      accent: 'var(--ai)',
-      primary: true,
-      onclick: () => app.resumeSession()
-    }));
-  }
-
-  menu.appendChild(card({
-    title: 'Sessão mista',
-    desc: 'Todas as formas, todos os grupos, em ordem imprevisível.',
-    accent: 'var(--ai)',
-    primary: !s.resume?.queue?.length,
-    onclick: () => app.go('setup', { mode: 'mixed' })
-  }));
-
-  menu.appendChild(card({
-    title: 'Treinar uma forma',
+  const modes = h('div', { class: 'menu' });
+  modes.appendChild(card({
+    title: 'Treinar uma forma', k: '形', accent: 'var(--murasaki)',
     desc: `${FORMS.map(f => FORM_SHORT[f]).join(' · ')}, uma de cada vez.`,
-    accent: 'var(--murasaki)',
     onclick: () => app.go('setup', { mode: 'form' })
   }));
-
-  menu.appendChild(card({
-    title: 'Treinar grupos',
+  modes.appendChild(card({
+    title: 'Treinar grupos', k: '類', accent: 'var(--midori)',
     desc: 'Só a identificação de Grupo 1, 2 e 3.',
-    accent: 'var(--midori)',
     onclick: () => app.go('setup', { mode: 'group' })
   }));
-
-  menu.appendChild(card({
-    title: 'Pontos fracos',
+  modes.appendChild(card({
+    title: 'Pontos fracos', k: '弱', accent: 'var(--shu)',
     desc: counts.seen ? 'Prioriza as combinações em que você mais erra.' : 'Disponível assim que houver respostas registradas.',
-    accent: 'var(--shu)',
     onclick: () => app.go('setup', { mode: 'weak' })
   }));
+  root.appendChild(modes);
 
-  menu.appendChild(card({
-    title: 'Erros recentes',
+  /* ---- acompanhamento ---- */
+  root.appendChild(h('h2', { class: 'h-sec', text: 'Acompanhamento' }));
+  const pend = pendingCounts();
+  root.appendChild(h('div', { class: 'track' },
+    h('div', { class: 'trk-stats' },
+      stat(counts.mastered, `de ${counts.trainable} dominadas`),
+      stat(counts.practiced, 'já praticadas'),
+      stat(pend.due + pend.weak, 'pedindo revisão')
+    ),
+    h('p', { class: 'trk-d', text: 'Combinações verbo × forma. “Dominada” = três acertos seguidos sem dica, ou dois acertos sem dica com pelo menos dois dias entre eles.' })
+  ));
+  const more = h('div', { class: 'menu menu-sm' });
+  more.appendChild(card({
+    title: 'Erros recentes', k: '誤', accent: 'var(--shu)',
     desc: 'O que você errou, o que digitou e por quê.',
-    accent: 'var(--shu)',
     onclick: () => app.go('errors')
   }));
-
-  menu.appendChild(card({
-    title: 'Progresso',
+  more.appendChild(card({
+    title: 'Progresso', k: '進', accent: 'var(--gold)',
     desc: 'Domínio por forma, por grupo e a matriz verbo × forma.',
-    accent: 'var(--gold)',
     onclick: () => app.go('progress')
   }));
-
-  menu.appendChild(card({
-    title: 'Referência',
+  more.appendChild(card({
+    title: 'Referência', k: '則', accent: 'var(--asagi)',
     desc: 'As regras do Rikai, em uma página.',
-    accent: 'var(--ink-faint)',
     onclick: () => app.go('reference')
   }));
+  root.appendChild(more);
 
-  root.appendChild(menu);
+  /* ---- ferramentas: o outro laboratório, em nova guia ---- */
+  root.appendChild(h('h2', { class: 'h-sec', text: 'Ferramentas' }));
+  root.appendChild(h('a', {
+    class: 'tool-card', href: BUNPOU_URL, target: '_blank', rel: 'noopener'
+  },
+    h('span', { class: 'tool-seal mincho', 'aria-hidden': 'true', text: '文' }),
+    h('span', { class: 'tool-txt' },
+      h('b', { text: 'Bunpou Lab — Gramática japonesa' }),
+      h('span', { text: 'Sessões de gramática do N5 com revisão espaçada. Abre em nova guia; seu progresso aqui continua intacto.' })
+    ),
+    h('span', { class: 'tool-ext', 'aria-hidden': 'true', html: EXT_ICON })
+  ));
 
   /* A home é para começar a estudar; configurar como estudar é em
      Ajustes. O único resquício aqui é um aviso informativo, e só quando
@@ -87,16 +108,80 @@ export function renderHome(app) {
   rodape.push('fonte: Básico Rikai');
 
   root.appendChild(h('p', {
-    class: 'src-line',
-    style: { textAlign: 'center', marginTop: '22px' },
+    class: 'src-line home-foot',
     text: rodape.join(' · ')
   }));
 
   return root;
 }
 
+/* ---- sessão interrompida ----
+   Cartão discreto no topo de "Praticar". Nunca retoma sozinho: só com o
+   clique em "Continuar sessão". */
+const MODE_LABEL = {
+  mixed: 'Sessão mista', form: 'Treinar uma forma', group: 'Treinar grupos',
+  weak: 'Pontos fracos', review: 'Revisar erros'
+};
+export function resumeInfo(r) {
+  if (!r || typeof r !== 'object') return null;
+  const v2 = r.v === 2;
+  if (!(v2 ? (r.current || (r.rest && r.rest.length)) : (r.queue && r.queue.length))) return null;
+  const cfg = r.config || {};
+  let label = MODE_LABEL[cfg.mode] || 'Sessão';
+  if (cfg.mode === 'form' && cfg.forms && cfg.forms.length === 1) label += ` · ${FORM_LABEL[cfg.forms[0]] || ''}`;
+  const answered = r.answered || 0;
+  const pend = v2 ? (r.rest || []).length + (r.phase === 'asking' && r.current ? 1 : 0) : r.queue.length;
+  const byTime = cfg.limitKind === 'time';
+  const ms = v2 ? (r.elapsedMs || 0) : null;
+  const t = ms == null ? null : `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+  return { label, answered, total: answered + pend, byTime, minutes: cfg.minutes, time: t,
+           feedback: v2 && r.phase === 'feedback', savedAt: r.savedAt || null };
+}
+function resumeCard(app, r) {
+  const m = resumeInfo(r);
+  if (!m) return null;
+  const meta = [];
+  meta.push(m.byTime ? `${m.answered} ${m.answered === 1 ? 'questão respondida' : 'questões respondidas'}`
+                     : `${m.answered} de ${m.total} questões`);
+  if (m.time) meta.push(`${m.time} estudados${m.byTime && m.minutes ? ` de ${m.minutes} min` : ''}`);
+  if (m.savedAt) {
+    const d = Math.floor((Date.now() - m.savedAt) / 86400000);
+    meta.push(`salva ${d <= 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d} dias`}`);
+  }
+  return h('section', { class: 'resume-card', 'aria-labelledby': 'resume-t' },
+    h('div', { class: 'resume-main' },
+      h('span', { class: 'resume-k mincho', 'aria-hidden': 'true', text: '続' }),
+      h('div', { class: 'resume-txt' },
+        h('h3', { id: 'resume-t', text: 'Continuar sessão anterior' }),
+        h('p', {}, h('b', {}, jpText(m.label)), m.feedback ? ' · no feedback da última resposta' : ''),
+        h('p', { class: 'resume-meta' }, meta.map(x => h('span', { text: x })))
+      )
+    ),
+    h('div', { class: 'resume-act' },
+      h('button', { class: 'btn btn-primary', 'data-resume': 'continue', onclick: () => app.resumeSession() }, 'Continuar sessão'),
+      h('button', { class: 'btn btn-ghost', 'data-resume': 'discard', onclick: () => app.discardResume() }, 'Descartar')
+    )
+  );
+}
+
+/* Pares pendentes, pela mesma classificação que o agendador usa. */
+function pendingCounts() {
+  const now = Date.now();
+  const out = { due: 0, weak: 0 };
+  for (const x of allPairs()) {
+    const c = pairCategory(getPair(x.verbId, x.form), now);
+    if (c === 'due') out.due += 1;
+    else if (c === 'weak') out.weak += 1;
+  }
+  return out;
+}
+
+function stat(n, label) {
+  return h('div', { class: 'trk-stat' }, h('b', { text: String(n) }), h('span', { text: label }));
+}
+
 function subtitle(s, counts) {
-  if (!counts.seen) return 'ます形 → forma-alvo. Comece por uma sessão mista.';
+  if (!counts.seen) return 'Da forma ます à forma-alvo, com explicação a cada resposta. Comece por uma sessão mista.';
   const dom = counts.trainable ? Math.round((counts.mastered / counts.trainable) * 100) : 0;
   const when = s.lastPracticedAt ? relativeDay(s.lastPracticedAt) : '';
   return `${counts.mastered} de ${counts.trainable} combinações dominadas (${dom}%)${when ? ' · ' + when : ''}.`;
@@ -109,15 +194,17 @@ function relativeDay(ts) {
   return `praticado há ${d} dias`;
 }
 
-function card({ title, desc, accent, onclick, primary }) {
+function card({ title, desc, accent, onclick, k }) {
   return h('button', {
-    class: `menu-card${primary ? ' primary' : ''}`,
+    class: 'menu-card',
     style: { '--accent': accent },
     onclick
   },
-    h('span', { class: 'rail' }),
-    h('b', { text: title }),
-    h('span', { text: desc })
+    k ? h('span', { class: 'menu-k mincho', 'aria-hidden': 'true', text: k }) : null,
+    h('span', { class: 'menu-txt' },
+      h('b', { text: title }),
+      h('span', { text: desc })
+    )
   );
 }
 
@@ -160,7 +247,7 @@ export function renderSetup(app, params) {
           state.forms = [f];
           [...set.children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
         }
-      }, FORM_LABEL[f]);
+      }, jpText(FORM_LABEL[f]));
       set.appendChild(b);
     });
     box.appendChild(set);
@@ -242,6 +329,7 @@ export function renderSetup(app, params) {
     h('button', {
       class: 'btn btn-primary btn-lg btn-block',
       onclick: () => {
+        const go = () => {
         updateSettings({
           sessionMode: state.limitKind,
           sessionLength: state.length,
@@ -257,6 +345,17 @@ export function renderSetup(app, params) {
           length: state.limitKind === 'time' ? Math.max(60, state.minutes * 8) : state.length,
           minutes: state.minutes
         });
+        };
+        /* Começar outra sessão com uma interrompida salva: pergunta antes. */
+        if (resumeInfo(getState().resume)) {
+          app.askConfirm({
+            title: 'Há uma sessão interrompida',
+            body: 'Começar outra sessão descarta a sessão salva. As respostas que você já deu continuam registradas.',
+            ok: 'Descartar e começar',
+            danger: true,
+            onOk: go
+          });
+        } else go();
       }
     }, 'Começar'),
   ));

@@ -1,59 +1,62 @@
 /* ===================================================================
    活用ラボ — sistema visual.
 
-   Mesma família do Bunpou Lab: papel washi, Zen Kaku Gothic + Shippori
-   Mincho, cartões limpos, tema claro e escuro. A identidade própria vem
-   do selo 活 em 藍 (indigo, contra o 朱 do Bunpou) e de uma cor fixa por
-   forma-alvo, que reaparece no chip, na matriz e nas estatísticas.
+   Mesma família do Bunpou Lab (sistema “Sakura”, docs/design-system.md):
+   papel washi, Zen Kaku Gothic + Shippori Mincho, cartões limpos, tema
+   claro e escuro desenhados. A identidade própria vem do selo 活 em 浅葱
+   e de uma cor fixa por forma-alvo.
    =================================================================== */
 
+/* Tokens Sakura — IDÊNTICOS aos do Bunpou Lab (docs/design-system.md).
+   Quem muda a paleta muda nos dois apps. */
 :root{
-  --paper:#F4EFE4; --card:#FBF7EE; --card-2:#F7F1E4;
-  --ink:#1C1B18; --ink-soft:#514D45; --ink-faint:#8A8478;
-  --ai:#20395B; --ai-2:#2F5488; --ai-wash:#E7EAF1;
-  --shu:#C33C2A; --shu-wash:#F6E3DD;
-  --midori:#33795B; --midori-wash:#E1EDE5;
-  --gold:#A8843F; --gold-wash:#F3EBD9;
-  --murasaki:#6B4A86; --murasaki-wash:#EDE5F3;
-  --asagi:#1F6F7A; --asagi-wash:#DDECEE;
-  --line:#DDD5C3; --line-strong:#C7BDA6;
+  --paper:#F7F3ED; --paper-2:#F1EBE2; --card:#FFFDFA; --card-2:#F7F2EB;
+  --ink:#26221E; --ink-soft:#544D46; --ink-faint:#776E65;
+  --ai:#2D4A70; --ai-2:#3B5F90; --ai-wash:#E9EEF5;
+  --sakura:#D9798D; --sakura-deep:#A9445E; --sakura-wash:#FBEEF1; --sakura-soft:#F1CBD4;
+  --shu:#BF4A33; --shu-wash:#F8E7E1;
+  --midori:#2F7656; --midori-wash:#E3EFE7;
+  --line:#E6DDD1; --line-strong:#D2C5B4;
+  --gold:#94732F; --gold-wash:#F4ECDA;
+  --murasaki:#6A4A7C; --murasaki-wash:#EFE7F3;
+  --asagi:#2C6E77; --asagi-wash:#DFEDEF;
   --on-accent:#fff;
-  --glass:rgba(244,239,228,.93);
-  --g1:rgba(32,57,91,.05); --g2:rgba(107,74,134,.04);
-  --shadow:0 1px 0 rgba(28,27,24,.04), 0 10px 30px -18px rgba(28,27,24,.45);
-  --shadow-lg:0 2px 0 rgba(28,27,24,.03), 0 22px 50px -26px rgba(28,27,24,.5);
+  --glass:rgba(247,243,237,.88);
+  --g1:rgba(45,74,112,.045); --g2:rgba(217,121,141,.07);
+  --radius-sm:8px; --radius:12px; --radius-lg:16px; --radius-xl:22px;
+  --shadow-sm:0 1px 2px rgba(38,34,30,.05);
+  --shadow:0 1px 0 rgba(38,34,30,.035), 0 8px 24px -16px rgba(38,34,30,.30);
+  --shadow-lg:0 1px 0 rgba(38,34,30,.03), 0 18px 44px -26px rgba(38,34,30,.40);
+  --focus-ring:0 0 0 3px color-mix(in srgb,var(--ai-2) 28%,transparent);
+  --ease:cubic-bezier(.2,.7,.2,1);
 
-  /* Uma cor por forma-alvo — usada em chips, matriz e estatísticas. */
-  --f-te:var(--ai);
-  --f-dictionary:var(--midori);
-  --f-ta:var(--gold);
-  --f-nai:var(--shu);
-  --f-tari:var(--asagi);
-  --f-nakatta:var(--murasaki);
-  --f-te-wash:var(--ai-wash);
-  --f-dictionary-wash:var(--midori-wash);
-  --f-ta-wash:var(--gold-wash);
-  --f-nai-wash:var(--shu-wash);
-  --f-tari-wash:var(--asagi-wash);
-  --f-nakatta-wash:var(--murasaki-wash);
+  /* Identidade própria do Katsuyou: selo 活 em 浅葱 (asagi), contra o 藍
+     do Bunpou. Uma cor fixa por forma-alvo, que reaparece no chip, na
+     matriz e nas estatísticas. */
+  --brand:var(--asagi);
+  --f-te:var(--ai); --f-dictionary:var(--midori); --f-ta:var(--gold);
+  --f-nai:var(--shu); --f-tari:var(--asagi); --f-nakatta:var(--murasaki);
+  --f-te-wash:var(--ai-wash); --f-dictionary-wash:var(--midori-wash); --f-ta-wash:var(--gold-wash);
+  --f-nai-wash:var(--shu-wash); --f-tari-wash:var(--asagi-wash); --f-nakatta-wash:var(--murasaki-wash);
 }
 html[data-theme="dark"]{
-  --paper:#15181E; --card:#1E232B; --card-2:#232932;
-  --ink:#ECE6DA; --ink-soft:#B3ADA1; --ink-faint:#807B71;
-  --ai:#6E93CE; --ai-2:#89A9DE; --ai-wash:rgba(110,147,206,.16);
-  --shu:#E5715B; --shu-wash:rgba(229,113,91,.16);
-  --midori:#5BAF88; --midori-wash:rgba(91,175,136,.15);
-  --gold:#C6A968; --gold-wash:rgba(198,169,104,.14);
-  --murasaki:#B08FD0; --murasaki-wash:rgba(176,143,208,.16);
-  --asagi:#5FB0BA; --asagi-wash:rgba(95,176,186,.15);
-  --line:#2C3038; --line-strong:#434A55;
-  --on-accent:#12161F;
-  --glass:rgba(21,24,30,.90);
-  --g1:rgba(110,147,206,.10); --g2:rgba(176,143,208,.07);
-  --shadow:0 1px 0 rgba(0,0,0,.3), 0 12px 34px -18px rgba(0,0,0,.75);
-  --shadow-lg:0 2px 0 rgba(0,0,0,.35), 0 24px 56px -28px rgba(0,0,0,.9);
+  --paper:#131419; --paper-2:#18191F; --card:#1C1D24; --card-2:#23242C;
+  --ink:#EEE9E3; --ink-soft:#BEB6AD; --ink-faint:#938B82;
+  --ai:#8FA9D8; --ai-2:#A9BEE4; --ai-wash:rgba(143,169,216,.14);
+  --sakura:#EA97A9; --sakura-deep:#F2B6C3; --sakura-wash:rgba(234,151,169,.12); --sakura-soft:rgba(234,151,169,.30);
+  --shu:#EC7E67; --shu-wash:rgba(236,126,103,.14);
+  --midori:#66BC95; --midori-wash:rgba(102,188,149,.13);
+  --line:#2B2C35; --line-strong:#3C3E4A;
+  --gold:#D2B475; --gold-wash:rgba(210,180,117,.13);
+  --murasaki:#B795CE; --murasaki-wash:rgba(183,149,206,.14);
+  --asagi:#6FB8C2; --asagi-wash:rgba(111,184,194,.13);
+  --on-accent:#121319;
+  --glass:rgba(19,20,25,.86);
+  --g1:rgba(143,169,216,.07); --g2:rgba(234,151,169,.06);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 0 rgba(0,0,0,.28), 0 10px 28px -16px rgba(0,0,0,.7);
+  --shadow-lg:0 1px 0 rgba(0,0,0,.32), 0 22px 52px -26px rgba(0,0,0,.85);
 }
-
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
@@ -341,6 +344,204 @@ table.matrix tbody th{font-weight:600;font-size:14px;}
 .score b{display:block;font-family:"Shippori Mincho",serif;font-size:46px;line-height:1.1;}
 .score span{font-size:13.5px;color:var(--ink-faint);}
 
+/* ===================================================================
+   CAMADA VISUAL “SAKURA” — componentes do Katsuyou Lab.
+   Só aparência: nenhuma regra funcional anterior (teclado virtual,
+   controles globais da topbar, tempo extra) é removida.
+   =================================================================== */
+body{
+  background:var(--paper);
+  background-image:
+    radial-gradient(1200px 520px at 100% -8%, var(--g2), transparent 60%),
+    radial-gradient(900px 480px at -10% -12%, var(--g1), transparent 60%);
+  background-attachment:fixed;
+}
+html{scrollbar-gutter:stable;}
+::selection{background:var(--sakura-soft);color:var(--ink);}
+:focus-visible{outline:2px solid var(--ai-2);outline-offset:2px;}
+rt{font-size:.5em;font-weight:500;letter-spacing:0;}
+
+/* ---------- barra superior ---------- */
+.wrap{max-width:940px;}
+.topbar-in{max-width:940px;min-width:0;}
+.brand{gap:11px;flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;}
+/* Logotipo: só o ideograma no círculo, centralizado, sem ornamento. A cor é
+   FIXA nos dois temas (a mesma do favicon), para o símbolo não mudar. */
+.brand .seal{position:relative;width:34px;height:34px;background:#2C6E77;color:#fff;font-size:17px;font-weight:700;
+  line-height:1;display:grid;place-items:center;padding:0 0 1px;
+  box-shadow:0 0 0 3px var(--card),0 0 0 4px var(--line);}
+.brand-txt b{font-size:15px;}
+.brand-txt span{margin-top:2px;font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;}
+.icon-btn,.topbtn{border-radius:999px;background:var(--card);border-color:var(--line-strong);}
+.icon-btn:hover,.topbtn:hover{border-color:var(--ai-2);color:var(--ai);}
+
+/* ---------- tipografia ---------- */
+.page-title{font-family:"Shippori Mincho",Georgia,serif;font-size:clamp(24px,4vw,30px);font-weight:700;letter-spacing:-.005em;line-height:1.22;margin:28px 0 6px;}
+.page-sub{font-size:14px;color:var(--ink-soft);margin:0 0 22px;max-width:62ch;}
+.lead{font-size:15px;line-height:1.7;color:var(--ink-soft);max-width:60ch;margin:10px 0 0;}
+.eyebrow{display:flex;align-items:center;gap:7px;margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--sakura-deep);}
+.eyebrow rt{letter-spacing:0;text-transform:none;}
+.eyebrow .eyebrow-flower{display:none;width:16px;height:16px;flex:none;}
+.h-sec{display:flex;align-items:center;gap:9px;font-size:11.5px;letter-spacing:.16em;margin:36px 0 14px;}
+.h-sec::before{content:'';width:9px;height:9px;flex:none;border-radius:60% 0 60% 0;background:var(--sakura);transform:rotate(45deg);opacity:.85;}
+.h-sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent);}
+
+/* ---------- abertura (home) ---------- */
+.hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 260px;align-items:center;gap:12px;padding:26px 0 0;}
+.hero .page-title{margin:0;}
+.hero-art{--branch:color-mix(in srgb,var(--ink-faint) 55%,transparent);--petal:var(--sakura-wash);--petal-line:var(--sakura);
+  align-self:stretch;display:flex;align-items:center;justify-content:flex-end;pointer-events:none;}
+.hero-art .branch{width:100%;max-width:280px;height:auto;}
+html[data-theme="dark"] .hero-art{--petal:rgba(234,151,169,.16);}
+@media (max-width:760px){
+  .hero{grid-template-columns:1fr;padding-top:20px;}
+  .hero-art{display:none;}
+  .eyebrow .eyebrow-flower{display:block;}
+}
+
+/* ---------- praticar ---------- */
+.session-card{position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;width:100%;text-align:left;
+  border:0;border-radius:var(--radius-xl);padding:22px 24px;color:#fff;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--asagi) 0%,color-mix(in srgb,var(--asagi) 70%,var(--ai)) 100%);
+  box-shadow:var(--shadow-lg);transition:transform .15s var(--ease),box-shadow .15s var(--ease);}
+html[data-theme="dark"] .session-card{background:linear-gradient(135deg,#1f3b44 0%,#2a2f4a 100%);border:1px solid var(--line-strong);}
+.session-card::after{content:'';position:absolute;right:-40px;top:-46px;width:190px;height:190px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.15),transparent 65%);pointer-events:none;}
+.session-card:hover{transform:translateY(-2px);}
+.session-card:focus-visible{outline:2px solid var(--ai-2);outline-offset:3px;}
+.session-k{flex:none;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;
+  background:rgba(255,255,255,.15);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);}
+.session-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+.session-txt b{font-size:18.5px;font-weight:700;}
+.session-txt span{font-size:13.5px;line-height:1.55;color:rgba(255,255,255,.86);}
+.session-go{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff;
+  color:var(--asagi);font-weight:800;font-size:17px;}
+html[data-theme="dark"] .session-go{color:#1f3b44;}
+
+.menu{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:8px;}
+.menu-card{display:flex;align-items:flex-start;gap:13px;border-radius:var(--radius-lg);padding:16px 17px;border-color:var(--line);
+  box-shadow:var(--shadow-sm);color:var(--ink);}
+.menu-card:hover{transform:translateY(-2px);border-color:var(--accent,var(--ai));box-shadow:var(--shadow);}
+.menu-card:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--ai-2);}
+.menu-card .menu-k{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:17px;font-weight:700;
+  color:var(--accent,var(--ai));background:color-mix(in srgb,var(--accent,var(--ai)) 12%,transparent);}
+.menu-card .menu-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.menu-card b{font-size:15px;margin:0;}
+.menu-card .menu-txt span{font-size:12.8px;color:var(--ink-faint);line-height:1.5;}
+@media (max-width:760px){ .menu{grid-template-columns:1fr;gap:9px;} .menu-card{padding:14px 15px;} }
+
+/* ---------- acompanhamento · ferramentas ---------- */
+.track{display:flex;align-items:center;gap:24px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:11px;box-shadow:var(--shadow-sm);}
+.trk-stats{display:flex;gap:26px;flex:none;}
+.trk-stat b{display:block;font-family:"Shippori Mincho",Georgia,serif;font-size:25px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;}
+.trk-stat span{display:block;font-size:12px;color:var(--ink-faint);font-weight:600;}
+.trk-d{flex:1 1 220px;margin:0;font-size:13px;line-height:1.55;color:var(--ink-soft);}
+@media (max-width:560px){
+  .track{gap:12px;padding:15px 16px;}
+  .trk-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;flex:1 1 100%;}
+}
+.tool-card{display:flex;align-items:center;gap:15px;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:var(--card);color:var(--ink);text-decoration:none;box-shadow:var(--shadow-sm);transition:border-color .15s,transform .15s var(--ease);}
+.tool-card:hover{border-color:var(--sakura);transform:translateY(-1px);}
+.tool-card:focus-visible{outline:2px solid var(--ai-2);outline-offset:3px;}
+.tool-seal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#2D4A70;color:#fff;line-height:1;font-size:18px;
+  box-shadow:0 0 0 3px var(--card),0 0 0 4px var(--line);}
+.tool-txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+.tool-txt b{font-size:15px;}
+.tool-txt span{font-size:13px;color:var(--ink-soft);line-height:1.5;}
+.tool-ext{display:inline-flex;line-height:0;}
+.tool-card .ext{width:16px;height:16px;flex:none;color:var(--ink-faint);}
+.home-foot{text-align:center;margin-top:26px;}
+
+/* ---------- cartões, botões, chips ---------- */
+.card{border-radius:var(--radius-lg);}
+.btn{border-radius:10px;transition:background .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease),box-shadow .15s,transform .1s;}
+.btn:hover{border-color:var(--ai-2);}
+.btn:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--ai-2);}
+.btn-primary{box-shadow:0 4px 12px -8px color-mix(in srgb,var(--ai) 80%,transparent);}
+.btn-primary:hover{filter:brightness(1.06);color:var(--on-accent);}
+.chip{transition:background .15s var(--ease),border-color .15s var(--ease);}
+.chip:hover{border-color:var(--ai-2);}
+.chip[aria-pressed="true"]{box-shadow:0 3px 10px -7px color-mix(in srgb,var(--ai) 80%,transparent);}
+
+/* ---------- exercício ---------- */
+.progress-rail{height:6px;background:color-mix(in srgb,var(--line) 85%,transparent);border:0;}
+.progress-rail i{background:linear-gradient(90deg,var(--asagi),var(--ai-2));}
+.qcard{position:relative;border-radius:var(--radius-xl);border-color:var(--line);}
+.qcard::before{content:'';position:absolute;left:24px;right:24px;top:-1px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,var(--sakura),color-mix(in srgb,var(--sakura) 20%,transparent) 55%,transparent);opacity:.75;}
+.q-prompt{line-height:1.5;}
+.q-prompt rt{font-size:.36em;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:500;color:var(--ink-soft);}
+.answer{border-width:1.5px;border-radius:14px;transition:border-color .15s var(--ease),box-shadow .15s var(--ease);}
+.answer:focus{box-shadow:var(--focus-ring);}
+
+/* ---------- feedback: texto em tinta, cor no veredito e nos marcadores ---------- */
+.fb{border-radius:var(--radius-lg);padding:16px 18px 14px;border:1px solid var(--line);border-left-width:4px;color:var(--ink);}
+.fb.ok{background:color-mix(in srgb,var(--midori-wash) 70%,var(--card));border-color:color-mix(in srgb,var(--midori) 30%,var(--line));border-left-color:var(--midori);}
+.fb.bad{background:color-mix(in srgb,var(--shu-wash) 55%,var(--card));border-color:color-mix(in srgb,var(--shu) 25%,var(--line));border-left-color:var(--shu);}
+.fb-lines{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:12px 0 0;align-items:baseline;}
+.fb-lines dt{font-size:12px;color:var(--ink-faint);font-weight:700;letter-spacing:.02em;}
+.fb-lines dd{margin:0;font-family:"Shippori Mincho",serif;font-size:20px;font-weight:700;line-height:1.7;color:var(--ink);overflow-wrap:anywhere;}
+.fb-lines dd.wrong{color:var(--shu);}
+.fb-lines dd.wrong .typed{text-decoration:line-through;text-decoration-thickness:1px;}
+.fb-lines dd.right{color:var(--ink);}
+.fb-lines dd.ctx{font-size:17px;color:var(--ink-soft);}
+.fb-lines dd.none{font-family:inherit;font-size:14px;font-weight:600;}
+.fb-lines dd.note{grid-column:2;font-family:inherit;font-size:12.8px;font-weight:600;color:var(--midori);line-height:1.4;}
+.fb-lines .arrow{color:var(--ink-faint);font-size:.8em;}
+.fb-lines rt,.steps rt,.rel-line rt{font-size:.5em;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:500;}
+.steps{border-radius:12px;background:var(--card);}
+.rule-line{border-radius:10px;background:var(--ai-wash);color:var(--ink);border-left:3px solid var(--ai);}
+.exc-line{border-radius:10px;background:var(--shu-wash);color:var(--ink);border-left:3px solid var(--shu);}
+.hint{border-radius:0 12px 12px 0;}
+
+/* ---------- referência, progresso, erros ---------- */
+.ref-head{border-radius:var(--radius-lg);transition:border-color .15s var(--ease);}
+.ref-head:hover{border-color:var(--ai-2);}
+.err-item{border-radius:var(--radius);}
+.stat-bar,.progress-rail{border-radius:99px;}
+.cell{border-radius:8px;}
+.notice{border-radius:0 12px 12px 0;}
+.acct-pop{border-radius:var(--radius-lg);}
+
+/* Formas com furigana dentro de títulos e listas herdam o tamanho do
+   contêiner — a classe .jp (16px) é para o japonês dentro de texto corrido. */
+.q-prompt .jp,.fb-lines .jp,.step-val .jp,.err-grid .jp,.err-head .jp,.fb-answer .jp,.rel-line .jp,.rule-line .jp,.exc-line .jp{font-size:inherit;font-weight:inherit;}
+@media (max-width:480px){
+  .session-card{padding:18px 18px;gap:12px;}
+  .session-card .session-k{display:none;}
+  .tool-card{padding:14px 15px;gap:12px;}
+}
+
+/* Linha de opção com um grupo de botões (Tema): no celular o grupo desce
+   para baixo do rótulo em vez de espremê-lo numa coluna estreita. */
+.optrow{flex-wrap:wrap;}
+.optrow .lbl{flex:1 1 220px;min-width:0;}
+
+/* ---------- diálogos (mesmo componente do Bunpou Lab) ---------- */
+.overlay{position:fixed;inset:0;z-index:90;display:none;place-items:center;padding:20px;
+  background:rgba(18,17,22,.48);backdrop-filter:blur(3px);}
+.overlay.show{display:grid;}
+.modal{position:relative;overflow:hidden;width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius-xl);padding:26px 26px 22px;box-shadow:var(--shadow-lg);}
+.modal::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--sakura),transparent 70%);}
+.modal h3{font-family:"Shippori Mincho",Georgia,serif;font-size:20px;margin:0 0 8px;}
+.modal p{color:var(--ink-soft);font-size:14px;margin:0 0 18px;line-height:1.6;}
+
+/* ---------- sessão interrompida (cartão da tela inicial) ---------- */
+.resume-card{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:16px 18px;
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--sakura);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);}
+.resume-main{display:flex;gap:13px;align-items:flex-start;flex:1 1 300px;min-width:0;}
+.resume-k{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:18px;line-height:1;
+  color:var(--sakura-deep);background:var(--sakura-wash);}
+.resume-txt{min-width:0;}
+.resume-txt h3{font-size:15.5px;margin:1px 0 2px;}
+.resume-txt p{margin:0;font-size:13.5px;color:var(--ink-soft);}
+.resume-meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px!important;font-size:12.5px!important;color:var(--ink-faint)!important;}
+.resume-act{display:flex;gap:8px;flex:none;flex-wrap:wrap;}
+@media (max-width:560px){ .resume-act{flex:1 1 100%;} .resume-act .btn-primary{flex:1;} }
+
 /* ---------------- mobile ---------------- */
 /* Os três controles globais — conta, Ajustes e tema — encolhem, mas
    nenhum deles some nem se esconde atrás de menu (§9). */
@@ -368,4 +569,91 @@ table.matrix tbody th{font-weight:600;font-size:14px;}
 }
 @media(prefers-reduced-motion:reduce){
   *{transition:none !important;animation:none !important;}
+}
+
+/* ===================================================================
+   COMPONENTES COMPARTILHADOS — bloco IDÊNTICO no Bunpou Lab
+   (index.html) e no Katsuyou Lab (src/styles.css). Ver
+   docs/design-system.md. Quem muda aqui muda nos dois.
+   =================================================================== */
+/* botões: mesma altura, peso e raio nos dois apps */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:9px 18px;
+  font-size:14.5px;font-weight:700;line-height:1.3;text-align:center;border-radius:10px;}
+.btn-sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:8px;}
+.btn-lg{min-height:52px;padding:12px 22px;font-size:16px;border-radius:12px;}
+.btn:hover{border-color:var(--ai-2);color:var(--ai);}
+.btn-primary{background:var(--ai);border-color:var(--ai);color:var(--on-accent);}
+.btn-primary:hover{background:var(--ai-2);border-color:var(--ai-2);color:var(--on-accent);}
+.btn-shu,.btn-shu:hover{background:var(--shu);border-color:var(--shu);color:#fff;}
+.btn-shu:hover{filter:brightness(1.07);}
+html[data-theme="dark"] .btn-shu,html[data-theme="dark"] .btn-shu:hover{color:#121319;}
+.btn-ghost{background:transparent;}
+.btn:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--ai-2);}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* cartões de configuração e linha de opção */
+.card.pad{padding:20px 22px;}
+.optrow{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;padding:14px 0;border-bottom:1px dashed var(--line);}
+.optrow:last-child{border-bottom:0;padding-bottom:0;}
+.optrow .lbl{flex:1 1 240px;min-width:0;}
+.optrow .lbl b{display:block;font-size:14.5px;line-height:1.4;}
+.optrow .lbl > span{display:block;margin-top:2px;font-size:13px;line-height:1.55;color:var(--ink-faint);}
+.set-head b{display:block;font-size:14.5px;line-height:1.4;}
+.set-head > span{display:block;margin-top:2px;font-size:13px;line-height:1.55;color:var(--ink-faint);}
+
+/* interruptor com rótulo de estado (liga/desliga) */
+.tgl{display:inline-flex;align-items:center;gap:10px;flex:none;min-height:36px;padding:3px 6px 3px 3px;border:0;
+  border-radius:999px;background:none;color:var(--ink-faint);font-size:13px;font-weight:700;cursor:pointer;}
+.tgl-track{position:relative;flex:none;width:44px;height:25px;border-radius:99px;background:var(--line-strong);
+  transition:background .18s var(--ease);}
+.tgl-track::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .18s var(--ease);}
+.tgl[aria-pressed="true"]{color:var(--ink);}
+.tgl[aria-pressed="true"] .tgl-track{background:var(--midori);}
+.tgl[aria-pressed="true"] .tgl-track::after{transform:translateX(19px);}
+.tgl-txt{min-width:68px;text-align:left;}
+.tgl:hover .tgl-track{box-shadow:0 0 0 3px color-mix(in srgb,var(--ai-2) 14%,transparent);}
+.tgl:focus-visible{outline:none;box-shadow:var(--focus-ring);}
+.tgl:disabled{opacity:.45;cursor:not-allowed;}
+
+/* escolha única entre opções do mesmo peso (Tema) */
+.choice-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px;}
+.choice{position:relative;display:flex;align-items:center;justify-content:center;min-height:46px;padding:10px 40px;
+  border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--card);color:var(--ink-soft);
+  font-size:14px;font-weight:700;line-height:1.3;text-align:center;
+  transition:background .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease);}
+.choice svg{position:absolute;left:16px;top:50%;width:18px;height:18px;transform:translateY(-50%);}
+.choice:hover{border-color:var(--ai-2);color:var(--ai);}
+.choice[aria-pressed="true"]{background:var(--ai-wash);border-color:var(--ai);color:var(--ai);box-shadow:inset 0 0 0 1px var(--ai);}
+.choice:focus-visible{outline:none;box-shadow:var(--focus-ring);}
+
+/* três ações do mesmo nível com exatamente o mesmo tamanho (Dados) */
+.btn-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.btn-trio .btn{width:100%;min-height:46px;}
+
+/* diálogo: ações à direita; no celular, empilhadas e na largura toda */
+.modal-act{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+@media (max-width:420px){ .modal{padding:22px 18px 18px;} .modal-act{flex-direction:column-reverse;} .modal-act .btn{width:100%;} }
+
+/* barra superior: mesma altura e mesmos controles nos dois apps */
+.topbar-in{min-height:56px;padding-top:10px;padding-bottom:10px;}
+.iconbtn,.topbtn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px 14px;
+  border-radius:999px;font-size:12.5px;font-weight:700;}
+.icon-btn,.iconbtn.sq{width:36px;height:36px;min-height:36px;padding:0;border-radius:999px;display:inline-grid;place-items:center;font-size:15px;}
+.acct-btn{min-height:36px;}
+.iconbtn .lbl.short,.topbtn .lbl.short{display:none;}
+@media (max-width:640px){
+  .iconbtn .lbl.full,.topbtn .lbl.full{display:none;}
+  .iconbtn .lbl.short,.topbtn .lbl.short{display:inline;font-size:15px;}
+  .iconbtn:not(.sq),.topbtn{width:36px;padding:0;}
+}
+
+/* campos */
+.numin{width:76px;min-height:38px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card-2);color:var(--ink);
+  padding:6px 9px;text-align:center;font-weight:700;font-size:14px;}
+.numin:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--ai-2);}
+
+@media (max-width:560px){
+  .card.pad{padding:17px 16px;}
+  .choice-group,.btn-trio{grid-template-columns:1fr;}
 }

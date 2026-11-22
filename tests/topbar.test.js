@@ -79,7 +79,7 @@ test('a topbar traz a identidade e os três controles globais', () => {
   const b = bar();
   assert.ok(b, 'a topbar existe');
   assert.ok(b.textContent.includes('活用ラボ'));
-  assert.ok(b.textContent.includes('Laboratório de Conjugação — Rikai N5'));
+  assert.ok(b.textContent.includes('Katsuyou Lab · Conjugação'));
   assert.ok(b.querySelector('.brand .seal').textContent === '活');
 
   assert.ok(top('login'), 'conta/login');
@@ -341,7 +341,7 @@ test('Aparência oferece os mesmos três temas', () => {
   app.applyTheme('auto');
   app.go('settings');
 
-  const chips = [...root.querySelectorAll('.chip')].filter(c => /Automático|Claro|Escuro/.test(c.textContent));
+  const chips = [...root.querySelectorAll('.choice')].filter(c => /Automático|Claro|Escuro/.test(c.textContent));
   assert.equal(chips.length, 3);
   chips.find(c => c.textContent.includes('Escuro')).click();
   assert.equal(app.theme, 'dark');

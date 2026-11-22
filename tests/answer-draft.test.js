@@ -109,7 +109,7 @@ test('A. のん sobrevive a dirty → loading → synced', () => {
   assert.equal(input().value, 'のん', 'o texto se perdeu no render de "Sincronizado"');
 
   /* E a questão continua a mesma, pronta para terminar. */
-  assert.equal(root.querySelector('.q-prompt').textContent, 'のみます');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'のみます');
   assert.equal(app.session.phase, 'asking');
 });
 
@@ -212,7 +212,7 @@ test('G. a próxima questão começa com o campo vazio', () => {
   btn('Responder').click();
   btn('Próxima').click();
 
-  assert.equal(root.querySelector('.q-prompt').textContent, 'たべます');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'たべます');
   assert.equal(app.session.answerDraft, '', 'o rascunho foi limpo');
   assert.equal(input().value, '', 'o campo da nova questão está vazio');
 });

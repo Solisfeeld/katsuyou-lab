@@ -7,6 +7,7 @@
    =================================================================== */
 
 import { conjugate } from './rules.js';
+import { kanjiSpelling } from './furigana.js';
 
 /* Normaliza o que o usuário digitou antes de comparar.
    - NFKC resolve kana de largura meia (ﾉﾐﾏｽ) e formas compatíveis;
@@ -44,6 +45,12 @@ export function acceptedAnswers(verb, form) {
 
   const kanji = kanjiVariant(verb, form);
   if (kanji) set.add(normalize(kanji));
+
+  /* A grafia com kanji que a INTERFACE mostra (furigana.js) também é aceita:
+     se a tela ensina 飲んで, quem digita 飲んで com o IME não pode ser
+     marcado como errado. Kana continua aceito como sempre. */
+  const shown = verb.id ? kanjiSpelling(verb.id, canonical) : null;
+  if (shown) set.add(normalize(shown));
 
   /* Aceitos declarados à mão no banco, se algum dia forem necessários. */
   (verb.accept?.[form] || []).forEach(a => set.add(normalize(a)));

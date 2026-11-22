@@ -7,9 +7,9 @@ import { renderHome, renderSetup } from './home.js';
 import { renderPractice, renderEnd } from './practice.js';
 import { renderProgress, renderErrors } from './progress.js';
 import { renderReference } from './reference.js';
-import { Session } from '../practice/engine.js';
+import { Session, TAB_ID } from '../practice/engine.js';
 import { verbById } from '../data/verbs.js';
-import { getState, updateSettings, resetAll, overallCounts } from '../progress/store.js';
+import { getState, updateSettings, resetAll, overallCounts, clearResume, reloadFromStorage } from '../progress/store.js';
 import {
   downloadBackup, readFileText, parseBackup, applyBackup, describeBackup
 } from '../progress/backup.js';
@@ -47,6 +47,10 @@ export class App {
        navegador. */
     this.nav = [];
     this.settingsReturn = null;
+    /* Diálogo de confirmação (mesmo componente do Bunpou Lab) e aviso curto
+       exibido uma vez na tela inicial. */
+    this.dialog = null;
+    this.flash = null;
     this.applyTheme(this.readTheme());
 
     /* Clicar fora ou apertar Esc fecha o popover — mesmo comportamento
@@ -56,6 +60,7 @@ export class App {
         if (this.acctOpen) { this.acctOpen = false; this.render(); }
       });
       document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && this.dialog) { e.preventDefault(); this.closeDialog(); return; }
         if (e.key === 'Escape' && this.acctOpen) { this.acctOpen = false; this.render(); }
       });
     } catch { /* ambiente sem document: nada a fazer */ }
@@ -206,13 +211,90 @@ export class App {
     this.render();
   }
 
+  /* “Continuar sessão”: reconstrói a sessão salva exatamente onde parou —
+     mesma questão, mesma fase (pergunta ou feedback), mesmo rascunho, mesma
+     fila — e o relógio continua do tempo estudado. Nada é reaplicado ao
+     progresso. Esta aba passa a ser a dona da sessão. */
   resumeSession() {
     const resume = getState().resume;
     const s = Session.fromResume(resume);
     if (!s || !s.current) { this.go('home'); return; }
     this.session = s;
+    s.saveQuiet();                       // assume a sessão nesta aba
     this.view = 'practice';
+    window.scrollTo?.({ top: 0 });
     this.render();
+  }
+
+  /* Descartar a sessão salva: pede confirmação. As respostas já dadas
+     continuam no progresso — só a sessão em andamento some. */
+  discardResume() {
+    this.askConfirm({
+      title: 'Descartar a sessão salva?',
+      body: 'As respostas que você já deu continuam registradas no seu progresso. Só a sessão em andamento é descartada.',
+      ok: 'Descartar',
+      danger: true,
+      onOk: () => { clearResume(); this.render(); }
+    });
+  }
+
+  /* Outra aba gravou o progresso (evento `storage`): esta aba recarrega o
+     estado — para nunca gravar por cima do que a outra gravou — e, se a
+     sessão aberta aqui foi retomada ou encerrada lá, larga a sessão. */
+  onExternalChange() {
+    const st = reloadFromStorage();
+    const s = this.session;
+    if (s && s.phase !== 'done' && (this.view === 'practice' || this.settingsReturn)) {
+      const r = st.resume;
+      if (!r || r.id !== s.id || r.owner !== TAB_ID) this.detachSession();
+      return;                                   // a sessão é desta aba
+    }
+    if (this.view !== 'practice') this.render();
+  }
+
+  /* Outra aba assumiu (ou encerrou) a sessão aberta aqui: larga sem gravar. */
+  detachSession() {
+    this.session = null;
+    this.view = 'home';
+    this.nav = [];
+    this.flash = 'Esta sessão continuou em outra aba.';
+    this.flashUntil = Date.now() + 10_000;
+    this.render();
+  }
+
+  /* ---------------- diálogo de confirmação ---------------- */
+  askConfirm({ title, body, ok = 'Confirmar', cancel = 'Cancelar', danger = false, onOk }) {
+    this.dialog = { title, body, ok, cancel, danger, onOk };
+    this.render();
+  }
+  closeDialog(run) {
+    const d = this.dialog;
+    this.dialog = null;
+    this.render();
+    if (run && d && d.onOk) d.onOk();
+  }
+  dialogNode() {
+    const d = this.dialog;
+    if (!d) return null;
+    const okBtn = h('button', {
+      class: `btn ${d.danger ? 'btn-shu' : 'btn-primary'}`, 'data-dialog': 'ok',
+      onclick: () => this.closeDialog(true)
+    }, d.ok);
+    const node = h('div', {
+      class: 'overlay show', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dlg-t',
+      onclick: e => { if (e.target === node) this.closeDialog(); }
+    },
+      h('div', { class: 'modal' },
+        h('h3', { id: 'dlg-t', text: d.title }),
+        h('p', { text: d.body }),
+        h('div', { class: 'modal-act' },
+          h('button', { class: 'btn btn-ghost', 'data-dialog': 'cancel', onclick: () => this.closeDialog() }, d.cancel),
+          okBtn
+        )
+      )
+    );
+    queueMicrotask?.(() => { try { okBtn.focus(); } catch {} });
+    return node;
   }
 
   endSession(session) {
@@ -256,7 +338,17 @@ export class App {
       default: body = renderHome(this);
     }
 
-    mount(this.root, this.topbar(), body);
+    /* Relógio de tempo estudado: corre só com a tela de exercício à vista
+       (sem diálogo por cima e com a página visível). Fora dela — Ajustes,
+       início, outra aba, app minimizado — a sessão fica pausada. */
+    const sess = this.session;
+    if (sess && sess.phase !== 'done' && typeof sess.pause === 'function') {
+      const visivel = typeof document === 'undefined' || document.visibilityState !== 'hidden';
+      if (this.view === 'practice' && visivel && !this.dialog) sess.resumeClock(); else sess.pause();
+    }
+
+    mount(this.root, this.topbar(), body, this.dialogNode());
+    if (this.view === 'home' && !(Date.now() < (this.flashUntil || 0))) this.flash = null;
   }
 
   /* ---------------- topbar ----------------
@@ -278,10 +370,10 @@ export class App {
             } else this.go('home');
           }
         },
-          h('span', { class: 'seal', text: '活' }),
+          h('span', { class: 'seal mincho', 'aria-hidden': 'true', text: '活' }),
           h('span', { class: 'brand-txt' },
             h('b', { text: '活用ラボ' }),
-            h('span', { text: 'Laboratório de Conjugação — Rikai N5' })
+            h('span', { text: 'Katsuyou Lab · Conjugação' })
           )
         ),
         h('span', { class: 'spacer' }),
@@ -465,13 +557,25 @@ function trainingSection(app) {
   card.appendChild(optRow(
     'Esconder o grupo durante o exercício',
     'Sem o grupo à vista, você precisa deduzi-lo antes de conjugar.',
-    h('button', {
-      class: 'chip',
-      'data-setting': 'hide-group',
-      'aria-pressed': String(!!s.settings.hideGroup),
+    toggle({
+      setting: 'hide-group', on: !!s.settings.hideGroup,
+      labels: ['Visível', 'Oculto'],
       onclick: () => { updateSettings({ hideGroup: !s.settings.hideGroup }); app.render(); }
-    }, s.settings.hideGroup ? 'Oculto' : 'Visível'),
+    }),
     { first: true }
+  ));
+
+  /* Padrão LIGADO. Desligar não apaga a necessidade de revisar: o erro
+     continua registrado e o par volta nas próximas sessões. */
+  const rep = s.settings.repeatErrors !== false;
+  card.appendChild(optRow(
+    'Repetir atividades erradas na mesma sessão',
+    'Apresenta novamente atividades respondidas incorretamente, em momentos diferentes da sessão. Desligada, o erro continua registrado e volta nas próximas sessões.',
+    toggle({
+      setting: 'repeat-errors', on: rep,
+      labels: ['Desligado', 'Ligado'],
+      onclick: () => { updateSettings({ repeatErrors: !rep }); app.render(); }
+    })
   ));
 
   card.appendChild(h('p', {
@@ -656,20 +760,43 @@ function accountSection(app) {
 }
 
 /* ---------------- APARÊNCIA ---------------- */
+/* Interruptor com rótulo de estado — o mesmo componente do Bunpou Lab.
+   `labels`: [desligado, ligado]. */
+function toggle({ setting, on, labels, onclick }) {
+  return h('button', {
+    class: 'tgl', type: 'button', 'data-setting': setting, 'aria-pressed': String(!!on), onclick
+  },
+    h('span', { class: 'tgl-track', 'aria-hidden': 'true' }),
+    h('span', { class: 'tgl-txt', text: on ? labels[1] : labels[0] })
+  );
+}
+
+/* Ícones de tema em SVG (traço na cor do texto), iguais nos dois apps. */
+export const THEME_SVG = {
+  auto: '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 3a7 7 0 0 1 0 14Z" fill="currentColor"/></svg>',
+  light: '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.8v2.4M10 15.8v2.4M1.8 10h2.4M15.8 10h2.4M4.2 4.2l1.7 1.7M14.1 14.1l1.7 1.7M4.2 15.8l1.7-1.7M14.1 5.9l1.7-1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  dark: '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M15.6 12.6A6.6 6.6 0 0 1 7.4 4.4a6.6 6.6 0 1 0 8.2 8.2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+};
+
+/* Tema: título e explicação na largura toda; abaixo, três opções de
+   tamanho idêntico (lado a lado no desktop, empilhadas no celular). */
 function appearanceSection(app) {
   const card = h('div', { class: 'card pad' });
-  const set = h('div', { class: 'chipset' });
+  card.appendChild(h('div', { class: 'set-head' },
+    h('b', { text: 'Tema' }),
+    h('span', { text: 'Automático acompanha o sistema. O atalho na barra superior faz o mesmo.' })
+  ));
+  const set = h('div', { class: 'choice-group', role: 'group', 'aria-label': 'Tema' });
   THEME_ORDER.forEach(mode => {
     set.appendChild(h('button', {
-      class: 'chip',
+      class: 'choice', type: 'button', 'data-theme-choice': mode,
       'aria-pressed': String(app.theme === mode),
       onclick: () => { app.applyTheme(mode); app.render(); }
-    }, `${THEME_ICON[mode]}  ${mode === 'auto' ? 'Automático' : mode === 'light' ? 'Claro' : 'Escuro'}`));
+    },
+      h('span', { html: THEME_SVG[mode], style: { display: 'contents' } }),
+      mode === 'auto' ? 'Automático' : mode === 'light' ? 'Claro' : 'Escuro'));
   });
-  card.appendChild(optRow(
-    'Tema', 'Automático acompanha o sistema. O atalho na barra superior faz o mesmo.',
-    set, { first: true }
-  ));
+  card.appendChild(set);
   return card;
 }
 
@@ -723,17 +850,18 @@ function dataSection(app) {
     }
   });
 
-  card.appendChild(h('div', { class: 'row' },
+  card.appendChild(h('div', { class: 'btn-trio' },
     h('button', { class: 'btn', onclick: () => app.exportProgress() }, 'Exportar progresso'),
     h('button', { class: 'btn', onclick: () => file.click() }, 'Importar progresso'),
     h('button', {
       class: 'btn btn-shu',
-      onclick: () => {
-        if (confirm('Apagar todo o progresso do 活用ラボ neste navegador?')) {
-          resetAll();
-          app.go('home');
-        }
-      }
+      onclick: () => app.askConfirm({
+        title: 'Resetar todo o progresso?',
+        body: 'Apaga todo o progresso do 活用ラボ neste navegador: domínio, erros recentes, sessões e a sessão salva. Não dá para desfazer — exporte um backup antes, se quiser guardar.',
+        ok: 'Resetar progresso',
+        danger: true,
+        onOk: () => { resetAll(); app.go('home'); }
+      })
     }, 'Resetar progresso')
   ));
   card.appendChild(file);

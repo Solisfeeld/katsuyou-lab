@@ -53,19 +53,21 @@ test('a tela inicial mostra todas as opções do §17', () => {
     assert.ok(t.includes(label), `faltou "${label}" na home`);
   }
   assert.ok(t.includes('活用ラボ'));
-  assert.ok(t.includes('Laboratório de Conjugação'));
+  assert.ok(t.includes('Katsuyou Lab'));
 });
 
 test('a referência traz as regras das seis formas e as exceções', () => {
   app.go('reference');
   /* Abre todas as seções para inspecionar o conteúdo. */
   root.querySelectorAll('.ref-head').forEach(b => b.click());
-  const t = text();
+  /* texto visível sem as leituras (<rt>): os verbos agora aparecem em kanji */
+  const c = root.cloneNode(true); c.querySelectorAll('rt').forEach(r => r.remove());
+  const t = c.textContent;
   for (const frag of [
     'い・ち・り → って', 'に・び・み → んで', 'き → いて', 'ぎ → いで', 'し → して',
     'linha /u/', 'って → った', 'んで → んだ',
-    'い vira わ', 'ない → なかった', 'のんだ → のんだり', 'V たり、V たり しています',
-    'いきます → いって', 'Básico Rikai'
+    'い vira わ', 'ない → なかった', '飲んだ → 飲んだり', 'V たり、V たり しています',
+    '行きます → 行って', 'Básico Rikai'
   ]) {
     assert.ok(t.includes(frag), `a referência não menciona "${frag}"`);
   }
@@ -111,7 +113,7 @@ const clickText = label => {
 
 test('§18 o exercício mostra o japonês em destaque e a forma pedida', () => {
   startWith([{ verbId: 'nomimasu', form: 'te' }]);
-  assert.equal(root.querySelector('.q-prompt').textContent, 'のみます');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'のみます');
   assert.equal(root.querySelector('.q-meaning').textContent, 'beber');
   assert.ok(text().includes('Forma て'));
   assert.ok(input(), 'há um campo de resposta');
@@ -218,7 +220,7 @@ test('§40 Enter responde e, no feedback, Enter avança', () => {
   assert.ok(text().includes('✓ Correto'), 'Enter deveria enviar a resposta');
 
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  assert.equal(root.querySelector('.q-prompt').textContent, 'たべます', 'Enter deveria avançar');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'たべます', 'Enter deveria avançar');
 });
 
 test('o IME não dispara envio durante a composição', () => {
@@ -262,7 +264,7 @@ test('§47 a tela final resume e oferece revisar os erros', () => {
   assert.ok(t.includes('Revisar'));
   assert.ok(t.includes('かいます'));
   clickText('Revisar os erros agora');
-  assert.equal(root.querySelector('.q-prompt').textContent, 'かいます');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'かいます');
 });
 
 test('§36 os erros recentes mostram o que foi digitado e o motivo', () => {
@@ -289,14 +291,14 @@ test('§34/§35 o progresso mostra estatísticas e a matriz de domínio', () => 
   assert.ok(root.querySelector('.cell.off'), 'combinação não ensinada aparece desabilitada');
 });
 
-test('§17 a sessão interrompida reaparece como "Continuar treino"', () => {
+test('§17 a sessão interrompida reaparece como "Continuar sessão anterior"', () => {
   startWith([{ verbId: 'nomimasu', form: 'te' }, { verbId: 'tabemasu', form: 'nai' }]);
   input().value = 'のんで';
   clickText('Responder');
   clickText('Próxima');
   app.go('home');
-  assert.ok(text().includes('Continuar treino'));
-  clickText('Continuar treino');
+  assert.ok(text().includes('Continuar sessão anterior'));
+  clickText('Continuar sessão');
   assert.ok(root.querySelector('.q-prompt'), 'a sessão foi retomada');
 });
 

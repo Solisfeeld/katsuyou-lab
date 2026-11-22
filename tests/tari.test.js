@@ -43,6 +43,9 @@ const { FORM_SOURCE } = await import('../src/data/sources.js');
 const root = document.getElementById('app');
 const app = new App(root);
 const text = () => root.textContent;
+/* Texto visível sem as leituras de furigana (<rt>): o que o aluno lê na linha
+   principal. Os textos da interface agora mostram kanji com leitura. */
+const base = el => { const c = el.cloneNode(true); c.querySelectorAll('rt').forEach(r => r.remove()); return c.textContent; };
 const c = (id, form) => conjugate(verbById(id), form).value;
 const btn = label => [...root.querySelectorAll('button')].find(b => b.textContent.trim() === label);
 
@@ -62,7 +65,8 @@ const answer = (id, f) => ({ verbId: id, form: f, correct: true, hinted: false, 
 
 test('a Forma たり fica entre ない e なかった, na ordem da Lição 16', () => {
   assert.deepEqual(FORMS, ['te', 'dictionary', 'ta', 'nai', 'tari', 'nakatta']);
-  assert.equal(FORM_LABEL.tari, 'Forma たり');
+  /* ～たり é apresentada como derivada da Forma た, não como conjugação nova */
+  assert.equal(FORM_LABEL.tari, '～たり (Forma た + り)');
   assert.deepEqual(FORM_SOURCE.tari, { primary: 'L16', also: ['L13'] });
 });
 
@@ -203,7 +207,7 @@ test('outras formas e outros tropeços também são diagnosticados', () => {
   assert.equal(diagnose(v, 'tari', 'のんたり').code, 'voicing');
   const inv = diagnose(v, 'ta', 'のんだり');
   assert.equal(inv.code, 'other-form-same-verb');
-  assert.match(inv.message, /Forma たり/);
+  assert.match(inv.message, /～たり \(Forma た \+ り\)/);
 });
 
 /* ===================================================================
@@ -279,15 +283,15 @@ test('a interface mostra たり no seletor, na home, na matriz e na referência'
   app.go('home');
   assert.ok(text().includes('たり'), 'home');
   app.go('setup', { mode: 'form' });
-  assert.ok([...root.querySelectorAll('.chip')].some(ch => ch.textContent === 'Forma たり'), 'seletor');
+  assert.ok([...root.querySelectorAll('.chip')].some(ch => base(ch) === '～たり (Forma た + り)'), 'seletor');
   store.recordAnswer(answer('nomimasu', 'tari'));
   app.go('progress');
-  assert.ok([...root.querySelectorAll('table.matrix thead th')].some(th => th.textContent === 'たり'), 'matriz');
-  assert.ok(text().includes('Forma たり'), 'estatística por forma');
+  assert.ok([...root.querySelectorAll('table.matrix thead th')].some(th => base(th) === 'たり'), 'matriz');
+  assert.ok(text().includes('～たり (Forma た + り)'), 'estatística por forma');
   app.go('reference');
   root.querySelectorAll('.ref-head').forEach(b => b.click());
-  for (const frag of ['Forma たり', 'V たり、V たり しています', 'のんだ → のんだり', 'いった → いったり']) {
-    assert.ok(text().includes(frag), `referência sem "${frag}"`);
+  for (const frag of ['～たり — derivado da Forma た', 'V たり、V たり しています', '飲んだ → 飲んだり', '行った → 行ったり']) {
+    assert.ok(base(root).includes(frag), `referência sem "${frag}"`);
   }
 });
 
@@ -295,12 +299,12 @@ test('referência de たり: uso, formação, padrão, verbo final, exemplo do B
   reset();
   app.go('reference');
   const sec = [...root.querySelectorAll('.ref-sec')]
-    .find(s => s.querySelector('.ref-head').textContent.includes('Forma たり'));
-  const corpo = sec.querySelector('.ref-body').textContent;
+    .find(s => base(s.querySelector('.ref-head')).includes('～たり'));
+  const corpo = base(sec.querySelector('.ref-body'));
   const posicoes = [
     'citar algumas ações como exemplos',
     '休みの 日は、本を 読んだり、ゲームを したり します。',
-    'Como formar', 'Forma た + り', 'のんだ → のんだり', 'いった → いったり',
+    'Como formar', 'Forma た + り', '飲んだ → 飲んだり', '行った → 行ったり',
     'V たり、V たり する', 'V たり、V たり します',
     'O verbo final pode mudar', 'As partes com たり ficam iguais', 'Quem muda é o する do final',
     'Não passado', 'Passado', 'Nos dois casos, 読んだり e したり não mudam',
@@ -319,12 +323,12 @@ test('referência de たり: uso, formação, padrão, verbo final, exemplo do B
 
   /* Não passado × passado: só o する final muda (os espaços do estilo Rikai são ignorados). */
   const linhas = new Map([...sec.querySelectorAll('.ref-table tr')]
-    .map(tr => [tr.children[0].textContent, tr.children[1].textContent.replace(/\s/g, '')]));
+    .map(tr => [tr.children[0].textContent, base(tr.children[1]).replace(/\s/g, '')]));
   assert.equal(linhas.get('Não passado'), '読んだり、したりします');
   assert.equal(linhas.get('Passado'), '読んだり、したりしました');
 
   /* "Lição 16" nunca aparece sem dizer que é do Básico Rikai. */
-  const antesDaLicao = sec.textContent.split('Lição 16').slice(0, -1);
+  const antesDaLicao = base(sec).split('Lição 16').slice(0, -1);
   assert.ok(antesDaLicao.length >= 2, 'título e rodapé citam a Lição 16');
   for (const trecho of antesDaLicao) assert.match(trecho, /Básico Rikai [—·] $/);
 
@@ -340,12 +344,14 @@ test('referência de たり: uso, formação, padrão, verbo final, exemplo do B
 test('feedback de erro na tela explica pela Forma た', () => {
   reset();
   app.startSession({ mode: 'review', queue: [{ verbId: 'nomimasu', form: 'tari' }], length: 1 });
-  assert.ok(text().includes('Forma たり'));
+  assert.ok(text().includes('～たり (Forma た + り)'));
   root.querySelector('input.answer').value = 'のみたり';
   btn('Responder').click();
-  const t = text();
+  const t = base(root);
   assert.ok(t.includes('✗ Ainda não'));
-  assert.ok(t.includes('のんだり'));
+  assert.ok(t.includes('飲んだり'));
+  /* o que foi digitado aparece exatamente como foi digitado */
+  assert.equal(root.querySelector('[data-typed]').textContent, 'のみたり');
   assert.ok(t.includes('Vem da Forma た'));
   assert.ok(t.includes('た → たり'));
   assert.ok(t.includes('Básico Rikai · Lição 16'));

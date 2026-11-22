@@ -8,6 +8,8 @@ correta, com a regra e a lição do Rikai que a sustenta.
 
 O objetivo é automatismo: responder sem reconstruir a regra conscientemente.
 
+Site: [https://katsuyou-lab.netlify.app/](https://katsuyou-lab.netlify.app/) · laboratório irmão de gramática: [Bunpou Lab](https://bunpou-lab.netlify.app/). O acesso fica na seção **Ferramentas** da tela inicial e abre em nova guia. Login, progresso e armazenamento dos dois apps são separados.
+
 ```
 のみます
 beber
@@ -28,7 +30,7 @@ Seis formas-alvo, todas sustentadas pelo **Básico Rikai**:
 | Forma de dicionário（辞書形） | 02 |
 | Forma た | 13 |
 | Forma ない | 15 |
-| Forma たり | 16 (`V たり、V たり しています`) |
+| ～たり (Forma た + り) | 16 (`V たり、V たり しています`) — derivada da Forma た |
 | Forma なかった | 16 (reforçada em 17 e 18) |
 
 Mais o treino de identificação de Grupo 1 / 2 / 3.
@@ -36,6 +38,17 @@ Mais o treino de identificação de Grupo 1 / 2 / 3.
 Nada além disso: potencial, passiva, causativa, volitiva, imperativo e
 condicionais estão fora, e estruturas como `Vています` ou `Vないでください` não são tratadas
 como formas-alvo. A justificativa completa está em [AUDITORIA.md](AUDITORIA.md).
+
+## Como o treino funciona
+
+- **Sessão por cota:** cada sessão mistura pares inéditos, pares em aprendizado, revisões vencidas e manutenção. A fatia de inéditos encolhe quando há muitos pares em aprendizado. Ver [docs/progressao-semanal.md](docs/progressao-semanal.md).
+- **Domínio espaçado:** três acertos seguidos sem dica, **ou** dois acertos sem dica com pelo menos dois dias entre eles. É assim que quem estuda uma vez por semana também vê o domínio avançar.
+- **Repetir atividades erradas na mesma sessão** (Ajustes, ligado por padrão): o erro volta uma vez, 3 a 7 questões depois, sem laço. A nota final é a da primeira tentativa, e o reforço aparece à parte.
+- **Feedback com a resposta exata:** o que você digitou (inclusive em branco ou "Não sei") ao lado da resposta correta.
+- **Kanji com furigana** nas formas verbais, usando o mesmo conjunto de kanji autorizados do Bunpou Lab. Hiragana continua aceito na resposta.
+- **Sessões interrompidas:** fechar a aba, o navegador ou atualizar a página salva o treino exatamente onde parou: questão, texto digitado, dicas abertas, feedback, fila (com os erros que voltariam) e tempo estudado. A tela inicial oferece **Continuar sessão anterior** ou **Descartar** (com confirmação), e nada é retomado sozinho. O cronômetro conta tempo estudado: pausa com a página oculta e não soma o tempo com o app fechado. Ver [docs/sessoes-interrompidas.md](docs/sessoes-interrompidas.md).
+
+Detalhes em [docs/repetir-erros-tari-furigana.md](docs/repetir-erros-tari-furigana.md). Sistema visual (compartilhado com o Bunpou Lab): [docs/design-system.md](docs/design-system.md).
 
 ## Rodar localmente
 
@@ -49,7 +62,7 @@ npm run dev        # http://localhost:5174
 Outros comandos:
 
 ```bash
-npm test             # motor, agendamento, progresso e interface (jsdom)
+npm test             # 393 testes: motor, agendamento, progresso, sessões e interface (jsdom)
 npm run check-content # banco × motor × fontes Rikai; falha em divergência
 npm run audit-feedback # imprime o feedback de erro para inspeção humana
 npm run build        # gera dist/
@@ -58,6 +71,19 @@ npm run preview      # serve dist/
 
 `npm run audit-feedback <verbo>` inspeciona um verbo só, por id
 (ex.: `npm run audit-feedback kaimasu`).
+
+Teste em navegador real das sessões interrompidas (Playwright; serve o `dist/`):
+
+```bash
+npm run build && python3 -m http.server 8767 --bind 127.0.0.1 --directory dist
+python e2e/retomada.py http://127.0.0.1:8767/
+```
+
+Simulação de semanas de uso (relógio virtual, sementes fixas):
+
+```bash
+node scripts/simular-semanas.mjs "$PWD" > resultado.json
+```
 
 ## Publicar no Netlify
 
@@ -175,9 +201,12 @@ katsuyou-lab/
 ├── index.html
 ├── package.json · vite.config.js · netlify.toml
 ├── AUDITORIA.md              auditoria das fontes Rikai
+├── docs/                     progressão, repetição, たり, furigana, sessões, sistema visual
+├── e2e/retomada.py           sessões interrompidas em navegador real
 ├── scripts/
 │   ├── check-content.js      guardião da integridade do conteúdo
-│   └── audit-feedback.js     relatório pedagógico do §53
+│   ├── audit-feedback.js     relatório pedagógico do §53
+│   └── simular-semanas.mjs   simulação de uso semanal/diário
 ├── netlify/
 │   ├── functions/progress.mts
 │   └── database/migrations/  tabela katsuyou_progress
@@ -186,6 +215,8 @@ katsuyou-lab/
 │   ├── practice.test.js      agendamento, progresso, ciclo de sessão
 │   ├── session-limits.test.js  sessões por tempo e separação do treino de grupos
 │   ├── account-backup.test.js  conta/sincronização e backup do progresso
+│   ├── weekly-progress.test.js  progressão semanal, reforço, furigana, resposta exata
+│   ├── session-resume.test.js   salvar, pausar, retomar e descartar sessões
 │   └── ui.test.js            telas e fluxo principal, em jsdom
 └── src/
     ├── main.js · styles.css · auth-sync.js
@@ -197,7 +228,8 @@ katsuyou-lab/
     │   ├── rules.js          motor: calcula e registra cada passo
     │   ├── explain.js        explicação e dicas progressivas
     │   ├── diagnose.js       identifica o tipo do erro
-    │   └── normalize.js      respostas aceitas
+    │   ├── normalize.js      respostas aceitas
+    │   └── furigana.js       kanji autorizados e leitura por forma
     ├── practice/
     │   ├── engine.js         estado de uma sessão
     │   └── scheduler.js      seleção e reapresentação de itens

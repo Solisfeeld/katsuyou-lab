@@ -25,7 +25,10 @@ export const FORM_LABEL = {
   dictionary: 'Forma de dicionário（辞書形）',
   ta: 'Forma た',
   nai: 'Forma ない',
-  tari: 'Forma たり',
+  /* ～たり NÃO é uma conjugação independente: é a Forma た + り, usada na
+     construção ～たり～たりする (Lição 16). A chave interna continua 'tari'
+     para não mexer em progresso, backup nem sincronização. */
+  tari: '～たり (Forma た + り)',
   nakatta: 'Forma なかった'
 };
 
@@ -281,7 +284,7 @@ function fromTa(verb, group, opts = {}) {
       { note: `Forma た (${ta.rule})`, value: ta.value },
       { note: '+ り', value }
     ],
-    rule: 'Forma たり: forme a Forma た e acrescente り.',
+    rule: '～たり não tem tabela própria: forme a Forma た e acrescente り (だ → だり).',
     derivedFrom: { form: 'ta', value: ta.value, rule: ta.rule, swap: 'た → たり' }
   };
 }

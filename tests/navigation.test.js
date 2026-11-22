@@ -185,7 +185,7 @@ test('Ajustes aberto durante a sessão volta para a MESMA sessão', () => {
   root.querySelector('input.answer').value = 'のんで';
   btnByText('Responder').click();
   btnByText('Próxima').click();
-  assert.equal(root.querySelector('.q-prompt').textContent, 'たべます');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'たべます');
 
   top('settings').click();
   assert.equal(app.view, 'settings');
@@ -195,7 +195,7 @@ test('Ajustes aberto durante a sessão volta para a MESMA sessão', () => {
   assert.equal(app.view, 'practice');
   assert.equal(app.session, sessao, 'voltou para outra sessão');
   assert.equal(app.session.answered, 1, 'o progresso da sessão se perdeu');
-  assert.equal(root.querySelector('.q-prompt').textContent, 'たべます', 'a questão mudou');
+  assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'たべます', 'a questão mudou');
 });
 
 test('Ajustes aberto sobre o resultado volta para o resultado', () => {

@@ -8,7 +8,7 @@
    detalhada em AUDITORIA.md.
    =================================================================== */
 
-import { h, backRow } from './dom.js';
+import { h, backRow, jpText } from './dom.js';
 import { cite } from '../data/sources.js';
 
 const SECTIONS = [
@@ -22,11 +22,11 @@ const SECTIONS = [
       table([
         ['Grupo 1', 'O som antes de ます é sempre /i/.', 'かいます・いきます・のみます'],
         ['Grupo 2 (i)', 'O som antes de ます é /e/.', 'たべます・おしえます・あげます・でかけます'],
-        ['Grupo 2 (ii)', 'Há apenas um hiragana antes de ます.', 'みます・います・ねます・きます (vestir)'],
+        ['Grupo 2 (ii)', 'Há apenas um hiragana antes de ます.', 'みます・います・ねます・着[き]ます (vestir)'],
         ['Grupo 2 (iii)', 'O som antes de ます é /i/ — poucos verbos; a maioria desse tipo é Grupo 1.', 'おきます・できます'],
-        ['Grupo 3', 'Basicamente きます e します, mais os compostos deles.', 'きます・します・もってきます・べんきょうします']
+        ['Grupo 3', 'Basicamente きます e します, mais os compostos deles.', '来[き]ます・します・もってきます・べんきょうします']
       ]),
-      note('Atenção ao par きます: como Grupo 2 é 着ます (vestir) e como Grupo 3 é きます (vir). A forma ます é a mesma; 辞書形 e ない形 separam os dois.')
+      note('Atenção ao par きます: como Grupo 2 é 着ます (vestir) e como Grupo 3 é 来[き]ます (vir). A forma ます é a mesma; 辞書形 e ない形 separam os dois.')
     ]
   },
   {
@@ -44,11 +44,11 @@ const SECTIONS = [
         ['ぎ → いで', '', 'およぎます → およいで'],
         ['し → して', '', 'はなします → はなして']
       ]),
-      exception('いきます → いって. Antes de ます é き, mas não fica いいて.'),
+      exception('行きます → 行[い]って. Antes de ます é き, mas não fica いいて.'),
       sub('Grupo 2'),
       p2('Trocar ます por て: たべます → たべて ／ おきます → おきて ／ います → いて'),
       sub('Grupo 3'),
-      p2('きます → きて ／ もってきます → もってきて ／ します → して ／ べんきょうします → べんきょうして')
+      p2('来[き]ます → 来[き]て ／ もってきます → もってきて ／ します → して ／ べんきょうします → べんきょうして')
     ]
   },
   {
@@ -74,7 +74,7 @@ const SECTIONS = [
       sub('Grupo 2'),
       p2('Trocar ます por る: たべます → たべる ／ おきます → おきる ／ います → いる'),
       sub('Grupo 3'),
-      p2('きます → くる ／ もってきます → もってくる ／ します → する ／ べんきょうします → べんきょうする')
+      p2('来[き]ます → 来[く]る ／ もってきます → もってくる ／ します → する ／ べんきょうします → べんきょうする')
     ]
   },
   {
@@ -91,11 +91,11 @@ const SECTIONS = [
         ['いで → いだ', '', 'およぎます → およいで → およいだ'],
         ['して → した', '', 'はなします → はなして → はなした']
       ]),
-      exception('いきます → いった. Antes de ます é き, mas não fica いいた.'),
+      exception('行きます → 行[い]った. Antes de ます é き, mas não fica いいた.'),
       sub('Grupo 2'),
       p2('Exclui-se ます e acrescenta-se た: たべます → たべた'),
       sub('Grupo 3'),
-      p2('します → した ／ きます → きた')
+      p2('します → した ／ 来[き]ます → 来[き]た')
     ]
   },
   {
@@ -121,12 +121,12 @@ const SECTIONS = [
       sub('Grupo 2'),
       p2('Trocar ます por ない: たべます → たべない ／ おきます → おきない ／ います → いない'),
       sub('Grupo 3'),
-      p2('きます → こない ／ します → しない')
+      p2('来[き]ます → 来[こ]ない ／ します → しない')
     ]
   },
   {
     id: 'tari',
-    title: 'Forma たり',
+    title: '～たり — derivado da Forma た',
     color: 'var(--f-tari)',
     source: ['L16', 'L13'],
     /* A formação e o exemplo da Lição 16 vêm do Rikai; o uso geral, o
@@ -134,19 +134,22 @@ const SECTIONS = [
        uma fonte complementar (ver AUDITORIA.md). */
     complement: 'Fonte complementar para a explicação',
     build: () => [
+      note('～たり não é uma conjugação nova para decorar do zero: é a Forma た com り no fim. Se a た termina em だ, fica だり. A construção estudada no N5 é ～たり～たりする.'),
       p('Serve para citar algumas ações como exemplos, deixando implícito que podem existir outras. Em vez de contar tudo o que você faz na folga, você cita algumas coisas: “faço coisas como X e Y”.'),
-      p2('休みの 日は、本を 読んだり、ゲームを したり します。'),
+      p2('休[やす]みの 日[ひ]は、本[ほん]を 読んだり、ゲームを したり します。'),
       p('Nos dias de folga, faço coisas como ler livros e jogar videogame.'),
       sub('Como formar'),
       p2('Forma た + り'),
       p('Faça a Forma た e acrescente り. É igual nos três grupos; para revisar a Forma た, veja a seção dela acima.'),
       table([
+        ['Grupo 1', '', 'かいます → かった → かったり'],
+        ['Grupo 1 (だ)', '', 'およぎます → およいだ → およいだり'],
         ['Grupo 1', '', 'のみます → のんだ → のんだり'],
         ['Grupo 2', '', 'たべます → たべた → たべたり'],
         ['Grupo 3', '', 'します → した → したり'],
-        ['Grupo 3', '', 'きます → きた → きたり']
+        ['Grupo 3', '', '来[き]ます → 来[き]た → 来[き]たり']
       ]),
-      exception('いきます → いった → いったり. A exceção é a mesma da Forma た.'),
+      exception('行きます → 行[い]った → 行[い]ったり. A exceção é a mesma da Forma た.'),
       sub('Padrão da frase'),
       table([
         ['Regra geral', '', 'V たり、V たり する'],
@@ -179,7 +182,7 @@ const SECTIONS = [
         ['ない → なかった', '', 'のみます → のまない → のまなかった'],
         ['', '', 'たべます → たべない → たべなかった'],
         ['', '', 'いきます → いかない → いかなかった'],
-        ['', '', 'きます → こない → こなかった'],
+        ['', '', '来[き]ます → 来[こ]ない → 来[こ]なかった'],
         ['', '', 'します → しない → しなかった']
       ]),
       note('Quadro da forma simples (Lição 16): não passado afirmativo Vる · não passado negativo Vない · passado afirmativo Vた · passado negativo Vなかった.')
@@ -192,7 +195,7 @@ const SECTIONS = [
     source: ['L01', 'L13', 'L15'],
     build: () => [
       table([
-        ['いきます', 'Exceção marcada com ★ no Rikai.', 'て → いって ／ た → いった (não いいて ／ いいた). As outras formas seguem a regra: いく・いかない・いかなかった. A Forma たり herda a exceção: いったり.'],
+        ['いきます', 'Exceção marcada com ★ no Rikai.', 'て → 行[い]って ／ た → 行[い]った (não いいて ／ いいた). As outras formas seguem a regra: いく・いかない・いかなかった. A Forma たり herda a exceção: いったり.'],
         ['かいます', 'い vira わ na forma ない.', 'かわない ／ かわなかった — nunca かあない.'],
         ['きます', 'Duas palavras com a mesma forma ます.', 'Vir (Grupo 3): くる・こない. Vestir (Grupo 2): きる・きない. Nas formas て e た as duas coincidem: きて・きた.'],
         ['おきます × ききます', 'Ambas têm き antes de ます.', 'おきます é Grupo 2 (おきる・おきない); ききます é Grupo 1 (きく・きかない).'],
@@ -229,7 +232,7 @@ export function renderReference(app) {
       }
     },
       h('span', { class: 'dot' }),
-      h('span', { text: sec.title }),
+      h('span', {}, jpText(sec.title)),
       caret
     );
 
@@ -241,8 +244,8 @@ export function renderReference(app) {
 }
 
 /* ---- pequenos construtores ---- */
-function p(text) { return h('p', { text }); }
-function p2(text) { return h('p', { class: 'jp', style: { fontSize: '15px' }, text }); }
+function p(text) { return h('p', {}, jpText(text)); }
+function p2(text) { return h('p', { class: 'jp', style: { fontSize: '15px' } }, jpText(text)); }
 function sub(text) {
   return h('p', {
     style: { fontSize: '11.5px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', fontWeight: '700', margin: '14px 0 4px' },
@@ -257,10 +260,10 @@ function table(rows) {
       h('td', { text: a }),
       h('td', {}, b ? h('span', { class: 'small muted', text: b }) : null,
         b && c ? h('br') : null,
-        c ? h('span', { class: 'jp', style: { fontSize: '14.5px' }, text: c }) : null)
+        c ? h('span', { class: 'jp', style: { fontSize: '14.5px' } }, jpText(c)) : null)
     ));
   });
   return t;
 }
-function exception(text) { return h('div', { class: 'exc-line', text: `★ ${text}` }); }
-function note(text) { return h('div', { class: 'notice', text }); }
+function exception(text) { return h('div', { class: 'exc-line' }, '★ ', ...jpText(text)); }
+function note(text) { return h('div', { class: 'notice' }, jpText(text)); }

@@ -187,11 +187,16 @@ test('aceita a grafia em kanji quando o Rikai apresenta o verbo em kanji', () =>
   assert.equal(kanjiVariant(verbById('ikimasu'), 'te'), '行って');
 });
 
-test('verbo sem kanji no Rikai não gera variante inventada', () => {
+test('verbo sem kanji no Rikai não gera variante do Rikai inventada', () => {
   const v = verbById('kimasu_kuru');
   assert.equal(v.kanji, null);
   assert.equal(kanjiVariant(v, 'te'), null);
-  assert.deepEqual(acceptedAnswers(v, 'te'), ['きて']);
+  /* Desde 2026-11 a interface mostra 来て (来 está no conjunto de kanji
+     autorizados do Bunpou Lab); quem digita a grafia que a tela ensina é
+     aceito. Kana continua aceito. */
+  assert.deepEqual(acceptedAnswers(v, 'te'), ['きて', '来て']);
+  /* verbo cujo kanji está FORA do conjunto autorizado continua só em kana */
+  assert.deepEqual(acceptedAnswers(verbById('kaerimasu'), 'te'), ['かえって']);
 });
 
 test('não aceita erro por aproximação', () => {

@@ -2,7 +2,7 @@
    活用ラボ — progresso, pontos fracos e matriz de domínio (§34, §35, §37)
    =================================================================== */
 
-import { h, formVars, backRow } from './dom.js';
+import { h, formVars, backRow, jpText, jpVerb } from './dom.js';
 import { FORMS, FORM_LABEL, FORM_SHORT, GROUP_LABEL } from '../conjugation/rules.js';
 import {
   statsByForm, statsByGroup, groupQuizStats, weakPairs, masteryMatrix, overallCounts,
@@ -72,7 +72,7 @@ export function renderProgress(app) {
     wCard.appendChild(h('p', { class: 'small muted', style: { margin: '0 0 10px' }, text: 'As combinações em que você mais tropeça.' }));
     weak.forEach(w => {
       wCard.appendChild(h('p', { style: { margin: '0 0 6px', fontSize: '14.5px' } },
-        h('span', { class: 'jp', text: w.verb.masu }),
+        jpVerb(w.verb.id, w.verb.masu),
         h('span', { class: 'muted', text: ' × ' }),
         h('span', { style: { color: `var(--f-${w.form})`, fontWeight: '700' }, text: FORM_SHORT[w.form] }),
         h('span', { class: 'muted small', text: `  ${w.pair.right}/${w.pair.seen}` })
@@ -97,7 +97,7 @@ export function renderProgress(app) {
 
 function statRow(name, pct, seen, vars) {
   return h('div', { class: 'stat-row', style: vars },
-    h('span', { class: 'stat-name', text: name }),
+    h('span', { class: 'stat-name' }, jpText(name)),
     h('div', { class: 'stat-bar' }, h('i', { style: { width: `${pct ?? 0}%` } })),
     h('span', { class: 'stat-val', text: seen ? `${pct}%` : '—' })
   );
@@ -119,7 +119,7 @@ function matrixCard() {
   const thead = h('thead');
   const hr = h('tr');
   hr.appendChild(h('th', { text: 'Verbo' }));
-  FORMS.forEach(f => hr.appendChild(h('th', { style: { color: `var(--f-${f})` }, text: FORM_SHORT[f] })));
+  FORMS.forEach(f => hr.appendChild(h('th', { style: { color: `var(--f-${f})` }, title: FORM_LABEL[f] }, jpText(FORM_SHORT[f]))));
   thead.appendChild(hr);
   table.appendChild(thead);
 
@@ -127,7 +127,7 @@ function matrixCard() {
   masteryMatrix().forEach(row => {
     const tr = h('tr');
     tr.appendChild(h('th', { scope: 'row' },
-      h('span', { class: 'jp', text: row.verb.masu }),
+      jpVerb(row.verb.id, row.verb.masu),
       h('span', { class: 'muted small', text: `  ${row.verb.meaning}` })
     ));
     FORMS.forEach(f => {
@@ -190,24 +190,26 @@ export function renderErrors(app) {
     }
     const item = h('div', { class: 'err-item' });
     item.appendChild(h('div', { class: 'err-head' },
-      h('span', { class: 'jp', text: e.masu }),
+      jpVerb(e.verbId, e.masu),
       h('span', { class: 'muted', text: '→' }),
       /* Um erro de identificação de grupo não é o erro de uma forma
          verbal, e a lista precisa dizer isso sem ambiguidade. */
       e.form === GROUP_QUIZ
         ? h('span', { class: 'tag', text: 'Treino de grupos' })
-        : h('span', { style: { color: `var(--f-${e.form})` }, text: FORM_LABEL[e.form] }),
+        : h('span', { style: { color: `var(--f-${e.form})` } }, jpText(FORM_LABEL[e.form])),
       h('span', { class: 'muted small', style: { fontWeight: '400' }, text: e.meaning })
     ));
 
     const dl = h('dl', { class: 'err-grid' });
-    dl.appendChild(h('dt', { text: e.dontKnow ? 'Você' : 'Você' }));
-    dl.appendChild(h('dd', { class: e.dontKnow ? 'muted' : 'wrong', text: e.dontKnow ? '(não sei)' : (e.given || '—') }));
-    dl.appendChild(h('dt', { text: 'Correto' }));
-    dl.appendChild(h('dd', { class: 'right', text: e.correct || '—' }));
+    /* “Sua resposta” é o texto exatamente como foi digitado; a correta
+       ganha kanji e leitura quando o verbo tem grafia autorizada. */
+    dl.appendChild(h('dt', { text: 'Sua resposta' }));
+    dl.appendChild(h('dd', { class: e.dontKnow ? 'muted' : 'wrong', text: e.dontKnow ? '“Não sei”' : (e.given || '(em branco)') }));
+    dl.appendChild(h('dt', { text: 'Correta' }));
+    dl.appendChild(h('dd', { class: 'right' }, e.form === GROUP_QUIZ ? (e.correct || '—') : (e.correct ? jpVerb(e.verbId, e.correct) : '—')));
     item.appendChild(dl);
 
-    if (e.reason) item.appendChild(h('p', { class: 'err-reason', text: `Motivo: ${e.reason}` }));
+    if (e.reason) item.appendChild(h('p', { class: 'err-reason' }, 'Motivo: ', ...jpText(e.reason)));
 
     item.appendChild(h('button', {
       class: 'btn-link',

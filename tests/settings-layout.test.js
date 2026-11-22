@@ -198,8 +198,9 @@ test('§12.6/§12.7 os três botões de DADOS estão no MESMO card', () => {
   assert.ok(exportar && importar && resetar, 'os três botões existem em DADOS');
 
   /* E na mesma linha, como no Bunpou. */
-  const row = card.querySelector('.row');
-  assert.ok(row, 'os botões ficam numa .row');
+  /* mesma grade de três ações de tamanho idêntico do Bunpou Lab */
+  const row = card.querySelector('.btn-trio');
+  assert.ok(row, 'os botões ficam numa .btn-trio');
   assert.equal(row.contains(exportar) && row.contains(importar) && row.contains(resetar), true);
   assert.equal(resetar.classList.contains('btn-shu'), true, 'reset tem destaque destrutivo');
 });
@@ -247,19 +248,18 @@ test('§12.8 resetar exige confirmação e só apaga quando confirmado', () => {
   store.recordAnswer({ verbId: 'nomimasu', form: 'te', correct: true, hinted: false, dontKnow: false, answer: 'のんで' });
   app.go('settings');
 
-  /* Recusando a confirmação, nada acontece. */
-  let perguntou = 0;
-  globalThis.confirm = () => { perguntou++; return false; };
+  /* A confirmação é o diálogo do app (o mesmo componente do Bunpou Lab).
+     Cancelando, nada acontece. */
   inCard('Dados', 'Resetar progresso').click();
-  assert.equal(perguntou, 1, 'precisa perguntar antes de apagar');
+  assert.ok(root.querySelector('.overlay.show [data-dialog="ok"]'), 'precisa perguntar antes de apagar');
+  root.querySelector('[data-dialog="cancel"]').click();
+  assert.equal(root.querySelector('.overlay.show'), null);
   assert.equal(store.getPair('nomimasu', 'te').right, 1, 'nada foi apagado');
   assert.equal(app.view, 'settings');
 
   /* Confirmando, apaga e volta para a home. */
-  globalThis.confirm = () => { perguntou++; return true; };
-  app.go('settings');
   inCard('Dados', 'Resetar progresso').click();
-  assert.equal(perguntou, 2);
+  root.querySelector('[data-dialog="ok"]').click();
   assert.equal(store.getPair('nomimasu', 'te').right, 0, 'o progresso foi apagado');
   assert.equal(app.view, 'home');
 });
@@ -341,7 +341,7 @@ test('a Aparência continua com os três temas', () => {
   app.applyTheme('auto');
   app.go('settings');
   const card = cardOf('Aparência');
-  const chips = [...card.querySelectorAll('.chip')];
+  const chips = [...card.querySelectorAll('.choice')];
   assert.equal(chips.length, 3);
   assert.ok(card.textContent.includes('Automático'));
   chips.find(c => c.textContent.includes('Escuro')).click();

@@ -78,7 +78,11 @@ function emptyState() {
       sessionLength: 20,      // 10 | 20 | 30
       sessionMode: 'count',   // 'count' | 'time'
       sessionMinutes: 10,     // 5 | 10 | 15
-      theme: 'auto'
+      theme: 'auto',
+      /* Repetir na mesma sessão o item respondido errado, mais adiante e em
+         posição sorteada. Padrão LIGADO; quem não tem a chave (progresso
+         antigo) recebe true pelo merge com estes padrões em sanitizeProgress. */
+      repeatErrors: true
     }
   };
 }
@@ -86,7 +90,14 @@ function emptyState() {
 function emptyPair() {
   return {
     seen: 0, right: 0, wrong: 0, hinted: 0, dontKnow: 0,
-    streak: 0, mastery: MASTERY.NEW, lastSeenAt: null
+    streak: 0, mastery: MASTERY.NEW, lastSeenAt: null,
+    /* Momento dos dois últimos acertos da sequência atual: medem se o acerto
+       sobreviveu a um INTERVALO (ver recompute). Ausentes no progresso
+       antigo — viram null e passam a ser gravados daqui em diante. */
+    lastRightAt: null, prevRightAt: null,
+    /* Tentativas de reforço (o item errado reapresentado na mesma sessão).
+       Ficam à parte: não apagam o erro original nem somam outro erro. */
+    reinforced: 0, reinforcedOk: 0
   };
 }
 
@@ -248,6 +259,7 @@ export function snapshotState() {
 }
 
 export function resetAll() {
+  writeDraft(null);
   state = emptyState();
   save();
 }
@@ -261,13 +273,21 @@ export function resetAll() {
    domínio instantâneo — por isso o acerto com dica ou logo após um erro
    não pula direto para "dominado".
    ------------------------------------------------------------------- */
-function recompute(p, { correct, hinted, dontKnow }) {
+/* Intervalo mínimo entre dois acertos para que eles valham como
+   recuperação ESPAÇADA (ver abaixo). */
+export const SPACED_MS = 2 * 86_400_000;
+
+function recompute(p, { correct, hinted, dontKnow }, now = Date.now()) {
   if (dontKnow || !correct) {
     p.streak = 0;
     p.mastery = MASTERY.LEARNING;
+    p.lastRightAt = null;
+    p.prevRightAt = null;
     return;
   }
   p.streak += 1;
+  p.prevRightAt = p.lastRightAt ?? null;
+  p.lastRightAt = now;
   if (hinted) {
     /* Acerto com dica vale menos (§29): sustenta o par e pode levá-lo a
        "quase firme", mas nunca a "dominado" — dominar é responder sem
@@ -277,7 +297,15 @@ function recompute(p, { correct, hinted, dontKnow }) {
     }
     return;
   }
-  if (p.streak >= 3) p.mastery = MASTERY.MASTERED;
+  /* Dominado: três acertos seguidos sem dica — OU dois acertos seguidos sem
+     dica separados por pelo menos dois dias. O segundo caminho existe para
+     quem estuda uma vez por semana: lembrar a forma depois de dias sem
+     praticar é evidência mais forte de automatismo do que três acertos na
+     mesma noite, e exigir três sessões seguidas fazia um par levar meses
+     para firmar. Os dois acertos continuam obrigatórios: nada é declarado
+     dominado sem resposta certa. */
+  const spaced = p.streak >= 2 && p.prevRightAt && (p.lastRightAt - p.prevRightAt) >= SPACED_MS;
+  if (p.streak >= 3 || spaced) p.mastery = MASTERY.MASTERED;
   else if (p.streak === 2) p.mastery = MASTERY.ALMOST;
   else p.mastery = MASTERY.LEARNING;
 }
@@ -326,7 +354,21 @@ export function recordAnswer(result) {
 
   const s = getState();
   const key = pairKey(result.verbId, result.form);
-  const p = s.pairs[key] || emptyPair();
+  const p = { ...emptyPair(), ...(s.pairs[key] || {}) };
+
+  /* Tentativa de REFORÇO: o item errado reapresentado na mesma sessão. Ela
+     não apaga o erro original (não soma acerto, não sobe a sequência) e
+     também não pune de novo (não soma outro erro nem outra linha em Erros
+     recentes). Fica contada à parte, para o resumo e para a análise. */
+  if (result.corrective) {
+    p.reinforced += 1;
+    if (result.correct) p.reinforcedOk += 1;
+    p.lastSeenAt = Date.now();
+    s.pairs[key] = p;
+    s.lastPracticedAt = Date.now();
+    save();
+    return p;
+  }
 
   p.seen += 1;
   p.lastSeenAt = Date.now();
@@ -373,10 +415,41 @@ export function recordSession(summary) {
   save();
 }
 
-export function setResume(resume) {
+/* opts.write === false: só põe no estado (a próxima gravação leva junto).
+   opts.quiet: grava no disco sem avisar a sincronização nem os ouvintes —
+   para dados transitórios da sessão (rascunho, relógio). */
+export function setResume(resume, opts = {}) {
   const s = getState();
   s.resume = resume;
+  if (opts.write === false) return;
+  if (opts.quiet) { writeLocal(s); return; }
   save();
+}
+
+function writeLocal(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+}
+
+/* Rascunho da resposta da sessão interrompida: chave PRÓPRIA, só local.
+   Não entra no progresso, no backup nem na sincronização — é texto
+   transitório, que só serve para reabrir a questão com o que foi digitado. */
+export const DRAFT_KEY = 'katsuyou_lab_draft_v1';
+export function writeDraft(d) {
+  try {
+    if (d && d.text) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+    else localStorage.removeItem(DRAFT_KEY);
+  } catch {}
+}
+export function readDraft() {
+  try { const r = localStorage.getItem(DRAFT_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+
+/* Outra aba gravou o progresso: esta passa a enxergar o mesmo estado, para
+   que uma gravação daqui nunca apague a de lá. */
+export function reloadFromStorage() {
+  state = load();
+  listeners.forEach(fn => { try { fn(state); } catch {} });
+  return state;
 }
 
 export function clearResume() { setResume(null); }

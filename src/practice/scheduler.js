@@ -50,6 +50,122 @@ function pickWeighted(pool, rand) {
   return pool[pool.length - 1];
 }
 
+/* -------------------------------------------------------------------
+   Progressão compatível com estudo SEMANAL.
+
+   Antes: sorteio ponderado sobre os 286 pares, com peso 4× para quem estava
+   “aprendendo” multiplicado pelos erros acumulados (que nunca expiravam), e
+   nenhuma noção de tempo. Para quem estuda uma vez por semana, a fila se
+   enchia dos mesmos pares antigos e os inéditos demoravam a aparecer.
+
+   Agora cada par cai em um de quatro grupos, e a fila é montada por COTA:
+     new  — nunca praticado ............................ 35%
+     weak — aprendendo (errou e ainda não firmou) ........ 30%
+     due  — firme, mas o intervalo de revisão venceu ..... 25%
+     keep — firme, já na 2ª metade do intervalo ......... 10%
+   A fatia de inéditos é ADAPTATIVA: com muitos pares em aprendizado, ela
+   encolhe (35% → 25% → 12%) e a sobra vai para consolidar o que já começou —
+   abrir pares novos sem firmar os antigos só acumularia pendências.
+   O intervalo é medido em DIAS reais desde a última vez (não em sessões):
+   quase firme 2 dias; dominado 7 → 14 → 28 → 56 dias conforme a sequência.
+   Uma semana sem abrir o app não “acumula atraso”: o que venceu entra na
+   cota de revisão, e o resto da sessão continua avançando. Grupo vazio cede
+   a vaga aos outros.
+   ------------------------------------------------------------------- */
+export const QUEUE_MIX = { new: 0.35, weak: 0.30, due: 0.25, keep: 0.10 };
+/* cota efetiva desta sessão, a partir do número de pares em aprendizado */
+export function queueMix(learningCount, length) {
+  const ns = learningCount <= 1.5 * length ? QUEUE_MIX.new : learningCount <= 3 * length ? 0.25 : 0.12;
+  return { new: ns, weak: 1 - ns - QUEUE_MIX.due - QUEUE_MIX.keep + 0.05, due: QUEUE_MIX.due - 0.05, keep: QUEUE_MIX.keep };
+}
+const DAY = 86_400_000;
+
+export function reviewIntervalDays(p) {
+  if (p.mastery === MASTERY.ALMOST) return 2;
+  if (p.mastery === MASTERY.MASTERED) return 7 * 2 ** Math.min(Math.max((p.streak || 3) - 3, 0), 3);
+  return 0;
+}
+
+export function pairCategory(p, now = Date.now()) {
+  if (!p || !p.seen) return 'new';
+  if (p.mastery !== MASTERY.ALMOST && p.mastery !== MASTERY.MASTERED) return 'weak';
+  const ago = now - (p.lastSeenAt || 0);
+  return ago >= reviewIntervalDays(p) * DAY ? 'due' : 'keep';
+}
+
+function buildMixQueue(pool, length, rand) {
+  const now = Date.now();
+  const cats = { new: [], weak: [], due: [], keep: [] };
+  /* Firmes que ainda estão na PRIMEIRA metade do intervalo não disputam a
+     cota de manutenção: com poucos pares nesse estado, a cota de 10% os
+     trazia toda semana (um par dominado, com intervalo de 56 dias, aparecia
+     em 12 sessões seguidas). Ficam como reserva, usada só se faltar o resto. */
+  const spare = [];
+  /* uso por verbo: os inéditos começam pelos verbos menos praticados */
+  const verbSeen = {};
+  for (const x of pool) {
+    const p = getPair(x.verbId, x.form);
+    verbSeen[x.verbId] = (verbSeen[x.verbId] || 0) + (p.seen || 0);
+  }
+  for (const x of pool) {
+    const p = getPair(x.verbId, x.form);
+    const c = pairCategory(p, now);
+    let k;
+    if (c === 'new') k = -verbSeen[x.verbId] * 0.05 + rand() * 2;
+    else if (c === 'weak') {
+      /* primeiro quem está a UM acerto de firmar (acertou da última vez) e
+         não foi visto hoje; depois os erros. A exposição acumulada pesa
+         contra, para que os mesmos pares difíceis não ocupem toda sessão. */
+      const ago = now - (p.lastSeenAt || 0);
+      k = (p.streak >= 1 ? 1.2 : 0.6) + (ago >= DAY ? 0.6 : 0) - Math.min(p.seen || 0, 12) * 0.06 + rand() * 0.9;
+    } else if (c === 'due') {
+      const over = (now - (p.lastSeenAt || 0)) / (Math.max(1, reviewIntervalDays(p)) * DAY);
+      k = Math.min(over, 4) + rand() * 0.8;
+    } else {
+      const frac = (now - (p.lastSeenAt || 0)) / (Math.max(1, reviewIntervalDays(p)) * DAY);
+      k = frac + rand() * 0.3;
+      if (frac < 0.5) { spare.push({ ...x, __k: k }); continue; }
+    }
+    cats[c].push({ ...x, __k: k });
+  }
+  for (const c of Object.keys(cats)) cats[c].sort((a, b) => b.__k - a.__k);
+  spare.sort((a, b) => b.__k - a.__k);
+
+  const target = Math.min(length, pool.length);
+  const queue = [];
+  const got = { new: 0, weak: 0, due: 0, keep: 0 };
+  const MIX = queueMix(cats.weak.length, target);
+  const verbWindow = Math.min(4, Math.max(1, Math.floor(new Set(pool.map(p => p.verbId)).size / 3)));
+  const recentVerbs = [];
+  let lastForm = null;
+  const order = ['new', 'weak', 'due', 'keep'];
+
+  while (queue.length < target) {
+    /* grupo mais abaixo da sua cota; grupos vazios saem da disputa */
+    const live = order.filter(c => cats[c].length);
+    if (!live.length) {
+      /* só a reserva sobrou: completa a fila com os mais perto de vencer */
+      if (!spare.length) break;
+      cats.keep.push(spare.shift());
+      continue;
+    }
+    live.sort((a, b) => (got[a] / (queue.length + 1) - MIX[a]) - (got[b] / (queue.length + 1) - MIX[b]));
+    const c = live[0];
+    const list = cats[c];
+    /* variedade (§31): evita verbo recente e a mesma forma em sequência,
+       relaxando só se não houver alternativa no grupo */
+    let i = list.findIndex(x => !recentVerbs.slice(-verbWindow).includes(x.verbId) && x.form !== lastForm);
+    if (i < 0) i = list.findIndex(x => !recentVerbs.slice(-verbWindow).includes(x.verbId));
+    if (i < 0) i = 0;
+    const chosen = list.splice(i, 1)[0];
+    got[c] += 1;
+    queue.push({ verbId: chosen.verbId, form: chosen.form });
+    recentVerbs.push(chosen.verbId);
+    lastForm = chosen.form;
+  }
+  return queue;
+}
+
 /**
  * Monta a fila de uma sessão.
  *   mode: 'mixed' | 'form' | 'group' | 'weak' | 'verb'
@@ -60,6 +176,12 @@ export function buildQueue({
   mode = 'mixed', forms = FORMS, groups = [1, 2, 3], length = 20, rand = Math.random
 } = {}) {
   let pool;
+
+  if (mode !== 'weak') {
+    const all = allPairs({ forms, groups });
+    if (!all.length) return [];
+    return buildMixQueue(all, length, rand);
+  }
 
   if (mode === 'weak') {
     const weak = weakPairs(60).map(r => ({ verbId: r.verbId, form: r.form, verb: r.verb }));
@@ -121,10 +243,14 @@ export function buildQueue({
  * Devolve uma NOVA fila.
  */
 export function requeue(queue, item, rand = Math.random) {
-  const gap = REQUEUE_MIN + Math.floor(rand() * (REQUEUE_MAX - REQUEUE_MIN + 1));
   const next = queue.slice();
-  /* Se a fila é mais curta que o intervalo, o item vai para o fim: ainda
-     assim não reaparece imediatamente, que é a regra que importa. */
+  /* Sem nenhum outro item na fila, reapresentar seria IMEDIATO: não
+     reenfileira. O erro já está registrado e volta nas próximas sessões. */
+  if (!next.length) return next;
+  /* Posição sorteada entre REQUEUE_MIN e REQUEUE_MAX itens à frente. Numa
+     fila mais curta que isso, vai para o fim — ainda com outra questão no
+     meio, nunca a próxima. */
+  const gap = REQUEUE_MIN + Math.floor(rand() * (REQUEUE_MAX - REQUEUE_MIN + 1));
   const at = Math.min(gap, next.length);
   next.splice(at, 0, { ...item, requeued: true });
   return next;

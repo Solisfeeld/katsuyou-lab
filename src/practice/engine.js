@@ -10,9 +10,10 @@ import { verbById } from '../data/verbs.js';
 import { FORMS, FORM_LABEL, GROUP_LABEL } from '../conjugation/rules.js';
 import { explain, hints } from '../conjugation/explain.js';
 import { diagnose } from '../conjugation/diagnose.js';
-import { isCorrect } from '../conjugation/normalize.js';
+import { isCorrect, normalize } from '../conjugation/normalize.js';
+import { kanjiSpelling } from '../conjugation/furigana.js';
 import { buildQueue, buildGroupQueue, requeue } from './scheduler.js';
-import { recordAnswer, recordSession, setResume, clearResume } from '../progress/store.js';
+import { recordAnswer, recordSession, setResume, clearResume, getState, writeDraft, readDraft } from '../progress/store.js';
 
 export class Session {
   constructor(config) {
@@ -37,9 +38,19 @@ export class Session {
             length: this.config.length
           }));
 
+    /* Relógio de TEMPO ESTUDADO. `startedAt` é um início virtual:
+       elapsedMs = agora − startedAt. Pausar (página oculta, fora da tela de
+       exercício, app fechado) desloca startedAt para frente pelo tempo
+       parado, então o intervalo pausado nunca entra na conta. */
     this.startedAt = Date.now();
+    this.pausedAt = null;
+    this._beat = this.startedAt;
+    this.id = this.config.id || newSessionId();
     this.answered = 0;
     this.correct = 0;
+    /* tentativas de reforço (item errado reapresentado nesta sessão) */
+    this.reinforced = 0;
+    this.reinforcedOk = 0;
     this.wrongItems = [];
     this.perForm = {};
     this.current = null;
@@ -59,7 +70,29 @@ export class Session {
     /* Uma sessão só pode ser gravada no histórico uma vez, por mais
        vezes que a tela de resultado seja renderizada. */
     this.recorded = false;
-    this.next();
+    /* Retomada: fromResume() reconstrói o estado sem abrir uma questão nova
+       (abrir gravaria um resumo incompleto por cima do salvo). */
+    if (!this.config.__restore) this.next();
+  }
+
+  /* ---------------- relógio (tempo estudado) ---------------- */
+  pause(now = Date.now()) {
+    if (this.pausedAt == null) this.pausedAt = now;
+  }
+  resumeClock(now = Date.now()) {
+    if (this.pausedAt != null) { this.startedAt += now - this.pausedAt; this.pausedAt = null; }
+    this._beat = now;
+  }
+  get paused() { return this.pausedAt != null; }
+  /* Pulso periódico da tela. Se entre dois pulsos passou mais que
+     CLOCK_MAX_GAP (computador dormindo com a página aberta, timers
+     congelados sem evento de visibilidade), o excesso não é tempo estudado. */
+  heartbeat(now = Date.now()) {
+    if (this.pausedAt == null) {
+      const gap = now - this._beat;
+      if (gap > CLOCK_MAX_GAP) this.startedAt += gap - CLOCK_MAX_GAP;
+    }
+    this._beat = now;
   }
 
   /* ---------------- limites da sessão (§32) ----------------
@@ -72,7 +105,7 @@ export class Session {
      Tudo é calculado por tempo absoluto (Date.now()), nunca por contagem
      de ticks: se o navegador suspender os timers, a volta já mostra o
      overtime correto. */
-  get elapsedMs() { return Date.now() - this.startedAt; }
+  get elapsedMs() { return Math.max(0, (this.pausedAt ?? Date.now()) - this.startedAt); }
 
   /** Duração planejada, em ms. null nas sessões por quantidade. */
   get plannedMs() {
@@ -126,20 +159,13 @@ export class Session {
        questão. A que estava na tela já foi concluída neste ponto. */
     if (this.plannedTimeReached || !this.queue.length) { this.#end(); return null; }
     const item = this.queue.shift();
-    const verb = verbById(item.verbId);
-    this.current = {
-      ...item,
-      verb,
-      isGroupQuestion: item.form === 'group',
-      prompt: verb.masu,
-      meaning: verb.meaning,
-      formLabel: item.form === 'group' ? 'Qual é o grupo?' : FORM_LABEL[item.form]
-    };
+    this.current = openItem(item);
     this.phase = 'asking';
     this.hintsShown = 0;
     this.lastResult = null;
     /* O rascunho não vaza de uma questão para outra. */
     this.answerDraft = '';
+    writeDraft(null);
     this.saveResume();
     return this.current;
   }
@@ -164,6 +190,8 @@ export class Session {
     const all = this.availableHints();
     if (this.hintsShown >= all.length) return null;
     this.hintsShown += 1;
+    /* a dica muda o peso do acerto: precisa sobreviver a um fechamento */
+    this.saveQuiet();
     return all[this.hintsShown - 1];
   }
 
@@ -205,41 +233,50 @@ export class Session {
   #finish({ correct, rawAnswer, diagnosis, dontKnow }) {
     const cur = this.current;
     const hinted = this.hintsShown > 0;
+    /* A tentativa de REFORÇO (item errado que voltou nesta sessão) é
+       contada à parte: não apaga o erro original nem soma outro. */
+    const corrective = !!cur.requeued;
 
-    this.answered += 1;
-    if (correct) this.correct += 1;
-
-    const fkey = cur.form;
-    this.perForm[fkey] = this.perForm[fkey] || { seen: 0, right: 0 };
-    this.perForm[fkey].seen += 1;
-    if (correct) this.perForm[fkey].right += 1;
-
-    recordAnswer({
-      verbId: cur.verbId,
-      form: cur.form,
-      correct,
-      hinted,
-      dontKnow,
-      answer: rawAnswer,
-      reason: diagnosis?.message || null
-    });
+    if (corrective) {
+      this.reinforced += 1;
+      if (correct) this.reinforcedOk += 1;
+    } else {
+      this.answered += 1;
+      if (correct) this.correct += 1;
+      const fkey = cur.form;
+      this.perForm[fkey] = this.perForm[fkey] || { seen: 0, right: 0 };
+      this.perForm[fkey].seen += 1;
+      if (correct) this.perForm[fkey].right += 1;
+    }
 
     if (!correct) {
-      this.wrongItems.push({ verbId: cur.verbId, form: cur.form });
-      /* Volta para a fila entre 3 e 7 questões à frente (§33) — mas não
-         depois da meta: a fila está congelada e reapresentar aqui só
-         esticaria a sessão artificialmente. O erro continua registrado
-         no progresso e volta nas próximas sessões. */
-      if (!this.plannedTimeReached) {
+      if (!corrective) this.wrongItems.push({ verbId: cur.verbId, form: cur.form });
+      /* Volta para a fila entre 3 e 7 questões à frente (§33), em posição
+         sorteada — se a opção “Repetir atividades erradas” estiver ligada
+         (padrão). Nunca depois da meta (a fila está congelada) e no máximo
+         UMA vez por item: errar de novo o reforço não cria um laço; o erro
+         fica registrado e volta nas próximas sessões. */
+      const repeatOn = getState().settings.repeatErrors !== false;
+      if (repeatOn && !corrective && !this.plannedTimeReached) {
         this.queue = requeue(this.queue, { verbId: cur.verbId, form: cur.form });
       }
     }
 
+    /* `given` é o texto EXATAMENTE como foi digitado (sem normalização);
+       `variant` marca um acerto escrito de forma diferente tanto do kana
+       canônico quanto da grafia que a própria tela mostra (飲んで) — aceito,
+       mas acompanhado da forma esperada. Digitar a grafia exibida não é
+       "grafia diferente". */
+    const canonical = cur.isGroupQuestion ? null : cur.verb[cur.form];
+    const shown = canonical ? kanjiSpelling(cur.verbId, canonical) : null;
     this.lastResult = {
       correct,
       dontKnow,
       hinted,
+      corrective,
       given: rawAnswer,
+      blank: !dontKnow && !String(rawAnswer || '').trim(),
+      variant: !!(correct && canonical && normalize(rawAnswer) !== canonical && normalize(rawAnswer) !== normalize(shown || '')),
       diagnosis,
       explanation: cur.isGroupQuestion ? null : explain(cur.verb, cur.form),
       verb: cur.verb,
@@ -247,7 +284,23 @@ export class Session {
       groupAnswer: cur.isGroupQuestion ? cur.verb.group : null
     };
     this.phase = 'feedback';
-    this.saveResume();
+    writeDraft(null);
+    /* Resposta e sessão salva vão para o disco no MESMO save(): o resumo
+       (já em fase de feedback) é posto no estado sem gravar, e recordAnswer
+       grava os dois juntos. Não existe instante em que a resposta conste do
+       progresso e a sessão salva ainda a mostre como pendente — retomar
+       nunca reaplica uma resposta. */
+    setResume(this.resumeData(), { write: false });
+    recordAnswer({
+      verbId: cur.verbId,
+      form: cur.form,
+      correct,
+      hinted,
+      dontKnow,
+      corrective,
+      answer: rawAnswer,
+      reason: diagnosis?.message || null
+    });
     return this.lastResult;
   }
 
@@ -257,6 +310,8 @@ export class Session {
       mode: this.config.mode,
       answered: this.answered,
       correct: this.correct,
+      reinforced: this.reinforced,
+      reinforcedOk: this.reinforcedOk,
       perForm: this.perForm,
       wrongItems: this.wrongItems,
       durationMs: this.elapsedMs
@@ -270,8 +325,12 @@ export class Session {
     if (this.recorded) return s;
     this.recorded = true;
     this.#end();
+    /* mesmo princípio: o registro da sessão e a remoção da sessão salva
+       numa única gravação — uma sessão concluída nunca volta como
+       “Continuar sessão anterior” e nunca é registrada duas vezes */
+    setResume(null, { write: false });
     if (s.answered > 0) recordSession(s);
-    clearResume();
+    else clearResume();
     return s;
   }
 
@@ -286,35 +345,131 @@ export class Session {
     });
   }
 
-  /* §17 "Continuar treino" — o suficiente para reconstruir a sessão
-     depois de um refresh. */
-  saveResume() {
-    if (this.phase === 'done') return;
-    setResume({
-      config: { ...this.config, queue: undefined },
-      queue: (this.current && this.phase === 'asking'
-        ? [{ verbId: this.current.verbId, form: this.current.form }, ...this.queue]
+  /* ---------------- sessão salva (“Continuar sessão anterior”) ----------------
+     Tudo o que é preciso para reconstruir a sessão EXATAMENTE onde parou:
+     a questão atual e a fase (pergunta ou feedback), o feedback exibido, as
+     dicas abertas, o rascunho digitado, a fila e sua ordem (com os itens de
+     reforço), os contadores e o tempo estudado. Vive em `resume`, dentro do
+     mesmo estado do progresso — por isso resposta e sessão salva são
+     gravadas juntas. */
+  resumeData() {
+    if (this.phase === 'done') return null;
+    const cur = this.current;
+    const lr = this.lastResult;
+    return {
+      v: 2,
+      id: this.id,
+      owner: TAB_ID,
+      savedAt: Date.now(),
+      config: { ...this.config, queue: undefined, __restore: undefined, id: undefined },
+      current: cur ? { verbId: cur.verbId, form: cur.form, ...(cur.requeued ? { requeued: true } : {}) } : null,
+      phase: this.phase,
+      hintsShown: this.hintsShown,
+      lastResult: lr ? { ...lr, verb: undefined, explanation: undefined } : null,
+      /* compatível com versões anteriores, que só liam `queue` */
+      queue: (cur && this.phase === 'asking'
+        ? [{ verbId: cur.verbId, form: cur.form, ...(cur.requeued ? { requeued: true } : {}) }, ...this.queue]
         : this.queue.slice()),
+      rest: this.queue.slice(),
       answered: this.answered,
       correct: this.correct,
+      reinforced: this.reinforced,
+      reinforcedOk: this.reinforcedOk,
       perForm: this.perForm,
       wrongItems: this.wrongItems,
-      startedAt: this.startedAt
-    });
+      elapsedMs: Math.round(this.elapsedMs)
+    };
+  }
+
+  /* Grava a sessão com o progresso (sincroniza como sempre). */
+  saveResume() {
+    if (this.phase === 'done') return;
+    setResume(this.resumeData());
+  }
+
+  /* Gravação local e silenciosa — rascunho, relógio, ciclo de vida. Não
+     dispara a sincronização: são dados transitórios, e a próxima resposta
+     leva tudo para a nuvem normalmente. */
+  saveQuiet() {
+    if (this.phase === 'done') return;
+    setResume(this.resumeData(), { quiet: true });
+    const cur = this.current;
+    writeDraft(cur && this.phase === 'asking' && this.answerDraft
+      ? { id: this.id, verbId: cur.verbId, form: cur.form, text: String(this.answerDraft) }
+      : null);
   }
 
   static fromResume(resume) {
-    if (!resume?.queue?.length) return null;
-    const s = new Session({ ...resume.config, queue: resume.queue });
-    s.answered = resume.answered || 0;
-    s.correct = resume.correct || 0;
-    s.perForm = resume.perForm || {};
-    s.wrongItems = resume.wrongItems || [];
-    /* O relógio recomeça: uma sessão por tempo retomada amanhã não pode
-       nascer expirada. */
-    s.startedAt = Date.now();
+    if (!resume) return null;
+    /* formato antigo (v1): só a fila, com a questão atual na frente */
+    if (resume.v !== 2) {
+      if (!resume.queue?.length) return null;
+      const s = new Session({ ...resume.config, queue: resume.queue });
+      copyCounters(s, resume);
+      s.startedAt = Date.now();        // v1 não guardava o tempo estudado
+      s._beat = s.startedAt;
+      return s;
+    }
+    const valid = x => x && verbById(x.verbId) && (x.form === 'group' || FORMS.includes(x.form));
+    const rest = (resume.rest || []).filter(valid);
+    if (!valid(resume.current)) {
+      /* sem questão atual legível: segue pela fila, se houver */
+      if (!rest.length) return null;
+      const s = new Session({ ...resume.config, id: resume.id, queue: rest });
+      copyCounters(s, resume);
+      s.startedAt = Date.now() - (resume.elapsedMs || 0); s._beat = Date.now();
+      return s;
+    }
+    const s = new Session({ ...resume.config, id: resume.id, queue: rest, __restore: true });
+    delete s.config.__restore;
+    copyCounters(s, resume);
+    s.current = openItem(resume.current);
+    s.phase = resume.phase === 'feedback' && resume.lastResult ? 'feedback' : 'asking';
+    s.hintsShown = resume.hintsShown || 0;
+    const d = readDraft();
+    s.answerDraft = (s.phase === 'asking' && d && d.id === resume.id &&
+      d.verbId === s.current.verbId && d.form === s.current.form) ? String(d.text || '') : '';
+    if (s.phase === 'feedback') {
+      const v = s.current.verb;
+      s.lastResult = {
+        ...resume.lastResult,
+        verb: v,
+        explanation: s.current.isGroupQuestion ? null : explain(v, s.current.form)
+      };
+    }
+    /* o relógio continua do tempo estudado salvo — o intervalo com o app
+       fechado não conta */
+    s.startedAt = Date.now() - (resume.elapsedMs || 0);
+    s._beat = Date.now();
     return s;
   }
+}
+
+/* Identifica esta aba: quem retoma uma sessão passa a ser o dono dela, e
+   outra aba que estivesse com a mesma sessão aberta a larga. */
+export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+export const CLOCK_MAX_GAP = 15_000;
+function newSessionId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function openItem(item) {
+  const verb = verbById(item.verbId);
+  return {
+    ...item,
+    verb,
+    isGroupQuestion: item.form === 'group',
+    prompt: verb.masu,
+    meaning: verb.meaning,
+    formLabel: item.form === 'group' ? 'Qual é o grupo?' : FORM_LABEL[item.form]
+  };
+}
+
+function copyCounters(s, r) {
+  s.answered = r.answered || 0;
+  s.correct = r.correct || 0;
+  s.reinforced = r.reinforced || 0;
+  s.reinforcedOk = r.reinforcedOk || 0;
+  s.perForm = r.perForm || {};
+  s.wrongItems = r.wrongItems || [];
 }
 
 function groupReason(verb) {

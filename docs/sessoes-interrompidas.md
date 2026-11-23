@@ -18,22 +18,23 @@ Código:
 | Começar outro treino com um salvo | **Começar** pede confirmação antes de descartar o salvo. |
 | **Encerrar sessão** ou conclusão normal | O resultado vai para o histórico uma única vez, e o treino deixa de ser "interrompido". |
 
-O cartão mostra o modo, as questões respondidas (e o total, nas sessões por quantidade), o tempo estudado e quando foi salvo.
+O cartão mostra o modo, as questões respondidas (e o total, nas sessões por quantidade), o tempo de sessão e quando foi salvo.
 
-## Cronômetro: tempo estudado
+## Cronômetro: tempo da sessão aberta
 
-`startedAt` passou a ser um início **virtual**: `elapsedMs = agora − startedAt`. Pausar desloca `startedAt` para frente pelo tempo parado, então o intervalo pausado nunca entra na conta.
+**Aba oculta não é sessão encerrada.** Trocar de aba, minimizar o navegador ou usar outro aplicativo **não** pausa.
 
-Pausa quando:
-- a página fica oculta;
-- a tela de exercício não está à vista (Ajustes, início, um diálogo);
-- o app é fechado.
+**Como a contagem funciona:**
+- `elapsedMs = agora − startedAt`, por tempo absoluto. Timers reduzidos ou suspensos em segundo plano não afetam a contagem.
+- `startedAt` é um início virtual: uma pausa o desloca para frente pelo tempo parado, então esse intervalo nunca é somado.
 
-Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 estudados, dois dias fechado, volta em **23:15**.
+**O relógio pausa só:**
+- fora da tela de exercício (Ajustes, início) ou com um diálogo por cima, como no Bunpou Lab;
+- quando a página é **descarregada** (`pagehide`: aba ou navegador fechados, página atualizada, navegação para outro site). Se a página voltar do bfcache, o intervalo fora não conta.
 
-**Proteção contra suspensões.** Um pulso por segundo (`heartbeat`) desconta qualquer intervalo acima de 15 s sem pulso, como o computador dormindo com a página aberta.
+Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 de sessão, dois dias fechado, volta em **23:15**.
 
-**Mudança em relação à versão anterior.** Antes, a sessão retomada recomeçava o relógio do zero, e trocar de aba não pausava.
+**Histórico de mudanças:** na versão de 21/11/2026, a aba oculta pausava e havia um teto de 15 s por intervalo sem pulso. Isso estava errado e foi corrigido em 23/11/2026.
 
 ## Gravação
 
@@ -41,7 +42,7 @@ Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 estudados, dois 
 
 **Momentos de gravação:**
 - **Com o progresso (e a sincronização, como sempre):** ao iniciar, ao responder e ao avançar.
-- **Só localmente (`saveQuiet`), sem disparar a sincronização:** ao abrir uma dica, ao digitar (pausa de 0,4 s), a cada 10 s de estudo e em `visibilitychange`, `pagehide`, `freeze` e `beforeunload`.
+- **Só localmente (`saveQuiet`), sem disparar a sincronização:** ao abrir uma dica, ao digitar (pausa de 0,4 s), a cada 10 s de sessão, em `visibilitychange` (oculta), `freeze` e `beforeunload` (só gravam) e em `pagehide` (grava e pausa).
 
 **O rascunho digitado** fica numa chave própria e só local (`katsuyou_lab_draft_v1`). Ele não entra no progresso, no backup nem na sincronização.
 
@@ -60,6 +61,8 @@ Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 estudados, dois 
 
 ## Testes
 
+- `e2e/cronometro.py` (navegador real, tempos medidos com espera real): 2 min com outra aba na frente, 1 min de navegador minimizado (timers congelados), 30 s com outro aplicativo, 90 s com a aba fechada, retomada, recarga e estabilidade da barra de rolagem.
+
 - `tests/session-resume.test.js` (jsdom, 14 testes):
   - "fechar a aba" relendo o disco e criando um App novo;
   - texto digitado, feedback, fila de reforço e ordem;
@@ -71,7 +74,7 @@ Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 estudados, dois 
 - `e2e/retomada.py` (navegador real com perfil persistente, 18 verificações):
   - fechar e reabrir o navegador;
   - 3 dias fechado;
-  - página oculta;
+  - página oculta sem pausa;
   - atualizar durante o feedback;
   - duas abas;
   - conclusão e descarte.

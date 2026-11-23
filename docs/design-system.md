@@ -41,13 +41,23 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
 
 | | Bunpou Lab | Katsuyou Lab |
 |---|---|---|
-| Logotipo (selo e favicon) | 文 branco em círculo `#2D4A70` | 活 branco em círculo `#2C6E77` |
+| Logotipo (selo e favicon) | 文 em círculo **vermelho/coral** `#C33C2A` (escuro: `#D24A36`) | 活 em círculo **azul** `#20395B` (escuro: `#2F5488`) |
 | Cartão principal | "Sessão de gramática" em gradiente 藍 | "Continuar treino" / "Sessão mista" em gradiente 浅葱 |
 | Cor própria | fontes (Rikai, NNK, TRY, Provas, Bunpro) | uma cor fixa por forma-alvo (て, 辞書形, た, ない, たり, なかった) |
 
 ## Componentes compartilhados
 
-- **Logotipo:** só o ideograma (文 ou 活), branco e centralizado num círculo de 34 px. A cor é **fixa nos dois temas**, a mesma do favicon, para o símbolo não mudar. O favicon é um SVG embutido com o mesmo círculo e o mesmo ideograma.
+- **Logotipo:** o desenho original de cada app, sem flor e sem moldura.
+  - Círculo sólido de 34 px com um anel fino **interno** (o mesmo do favicon) e o ideograma 文 ou 活 em gótico 800, cor `#FBF7EE`, centralizado (desvio medido: 0 px).
+  - Nenhuma sombra ou anel externo. A versão de 21/11 tinha um anel externo cortado pelo `overflow:hidden` da marca, o que dava a impressão de uma moldura quadrada.
+  - As cores de identidade são as originais e não seguem a paleta sakura: Bunpou vermelho/coral, Katsuyou azul. No tema escuro, usa-se um tom um pouco mais claro da mesma cor.
+  - As classes `.seal-bunpou` e `.seal-katsuyou` são usadas no logotipo e no selo do cartão "Ferramentas" do outro app.
+- **Favicons:** arquivos reais em `public/`, copiados pelo Vite para a raiz do site.
+  - `favicon.svg`: o círculo, o anel interno e o ideograma.
+  - `favicon-32.png`: fallback para navegadores sem favicon SVG.
+  - `apple-touch-icon.png`: 180 px.
+  - As referências levam `?v=3` para não ficarem presas no cache.
+  - A versão de 21/11 usava um `data:` URI com `#` sem codificar, o que tornava o SVG inválido; por isso o favicon sumiu.
 - **Barra superior:** logotipo e nome à esquerda. À direita ficam, nesta ordem, o relógio (só no Bunpou, durante a sessão), a conta, Ajustes e o tema.
   - Os controles têm a mesma altura nos dois apps (36 px), e a barra tem 56 px.
   - Abaixo de 640 px, Ajustes vira ⚙ (com `aria-label`).
@@ -72,12 +82,19 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - Trio de ações de tamanho idêntico (`.btn-trio`): Exportar, Importar e Resetar progresso. Empilhado no celular; Resetar mantém a cor de alerta e a confirmação.
   - Campos numéricos (`.numin`).
   - Diálogo de confirmação (`.overlay`/`.modal`/`.modal-act`), com ações empilhadas abaixo de 420 px. O Katsuyou passou a usar o mesmo diálogo do Bunpou, em vez do `confirm()` do navegador.
-- **Cartão de questão (`.qcard`):** linha de sakura no topo. No Bunpou: tags à esquerda dentro do cartão, Takoboto acima do cartão à direita (expande da direita para a esquerda), botões de resposta e "Continuar" dentro do cartão e "Encerrar" fora.
+  - **Teclado, igual nos dois:** o diálogo abre com a ação (Sair, Descartar…) selecionada; setas e Tab alternam; Enter confirma o **selecionado**; Esc cancela; os atalhos da tela por baixo ficam bloqueados.
+  - **Botão selecionado ACENDE, sem anel nem contorno:** fundo mais intenso (Sair: `#BF4A33 → #DE5638`; no escuro, `#FF8E70`), texto reforçado e um brilho difuso do próprio botão (só sombras com desfoque e espalhamento negativo). Continuar/Cancelar selecionado ganha fundo tingido de 藍, texto em negrito e o mesmo brilho, sem borda colorida. O outro botão fica com opacidade 0,72, para não haver dúvida de qual recebe o Enter. Nenhum `outline` é desenhado.
+- **Tela de exercício (mesma composição nos dois; o Bunpou é a referência):**
+  - Ordem: barra da sessão (`.sessbar`/`.pbar`), cabeçalho (`.stagehead`), cartão (`.qcard`) e "Encerrar sessão" centralizado abaixo do cartão (`.foot`).
+  - No cartão: etiquetas (`.qtop`/`.qtags`), enunciado (`.qprompt`), resposta, ações (`.qactions`: primário + fantasmas) e feedback (`.fb` com `.verdict` e linhas rotuladas `.fline`/`.fl-t`).
+  - Esses estilos estão no bloco compartilhado, com os valores do Bunpou.
+  - **Bunpou:** alternativas, tesoura, Takoboto acima do cartão à direita, ChatGPT, tags, Chutei e Continuar.
+  - **Katsuyou:** a forma pedida e o grupo como etiquetas; "Escreva a Forma て de:"; o verbo em destaque proporcional (34 px; 30 px no celular), não mais gigante e centralizado; o campo `.tin` do Bunpou; Responder (primário) com Dica e Não sei (fantasmas); feedback em linhas rotuladas ("Sua resposta", "Resposta correta", "Como chegar", "Regra utilizada"…).
 - **Feedback (`.fb`):** borda esquerda de 4 px na cor do veredito, fundo levemente tingido e texto em tinta.
 
 ## Acessibilidade
 
-- Foco visível em todos os controles (`:focus-visible` + `--focus-ring`).
+- Foco visível em todos os controles (`:focus-visible` + `--focus-ring`). Nos diálogos, o foco é indicado pelo estado "aceso" descrito acima, não por um anel.
 - Todas as decorações SVG têm `aria-hidden="true"` e `focusable="false"`.
 - `prefers-reduced-motion: reduce` zera transições e animações.
 - Alvo de toque ≥ 36 px na topbar e ≥ 44 px nas ações principais.

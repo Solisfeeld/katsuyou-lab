@@ -51,7 +51,7 @@ try:
         fila = [(i['verbId'], i['form'], bool(i.get('requeued'))) for i in st['resume']['rest']]
         pairs0 = json.dumps(st['pairs'], sort_keys=True)
         check('o erro entrou na fila de reforço', any(r for _, _, r in fila))
-        # 23:15 estudados
+        # 23:15 de sessão
         pg.evaluate("()=>{ const s=window.KatsuyouApp.session; s.startedAt=Date.now()-(23*60+15)*1000; s._beat=Date.now(); s.saveQuiet(); }")
 
         # ---------- fechar e reabrir o navegador ----------
@@ -59,7 +59,7 @@ try:
         t = pg.inner_text('body')
         check('reabrir o navegador mostra "Continuar sessão anterior"', 'Continuar sessão anterior' in t)
         check('não retoma sozinho', pg.evaluate("window.KatsuyouApp.view") == 'home')
-        check('cartão com respondidas e tempo', '2 questões respondidas' in t and '23:15 estudados' in t, t[t.find('Continuar sessão anterior'):][:140].replace('\n', ' | '))
+        check('cartão com respondidas e tempo', '2 questões respondidas' in t and '23:15 de sessão' in t, t[t.find('Continuar sessão anterior'):][:140].replace('\n', ' | '))
         # três dias fechado
         pg.evaluate(f"""()=>{{ const s=JSON.parse(localStorage.getItem('{KEY}')); s.resume.savedAt-=3*86400000;
             localStorage.setItem('{KEY}',JSON.stringify(s)); }}""")
@@ -73,16 +73,13 @@ try:
         check('cronômetro parte de 23:15 (os 3 dias não contam)', 1395 <= r['el'] <= 1397, f"{r['el']} s")
         check('retomar não reaplica respostas', json.dumps(state(pg)['pairs'], sort_keys=True) == pairs0)
 
-        # ---------- página oculta pausa ----------
+        # ---------- página oculta NÃO pausa ----------
         pg.evaluate("""()=>{ window.__v='hidden'; Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>window.__v});
                          document.dispatchEvent(new Event('visibilitychange')); window.__e=window.KatsuyouApp.session.elapsedMs; }""")
         pg.wait_for_timeout(2500)
         oc = pg.evaluate("()=>window.KatsuyouApp.session.elapsedMs-window.__e")
-        pg.evaluate("()=>{ window.__v='visible'; document.dispatchEvent(new Event('visibilitychange')); window.__e=window.KatsuyouApp.session.elapsedMs; }")
-        pg.wait_for_timeout(1500)
-        vi = pg.evaluate("()=>window.KatsuyouApp.session.elapsedMs-window.__e")
-        check('página oculta: cronômetro pausa', oc < 100, f'{oc} ms')
-        check('página visível: cronômetro volta', 1200 <= vi <= 1900, f'{vi} ms')
+        pg.evaluate("()=>{ window.__v='visible'; document.dispatchEvent(new Event('visibilitychange')); }")
+        check('página oculta: o cronômetro CONTINUA', 2300 <= oc <= 3200, f'{oc} ms em 2,5 s')
 
         # ---------- atualizar durante o feedback ----------
         answer(pg, 'かいた')

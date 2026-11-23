@@ -92,7 +92,7 @@ export function renderHome(app) {
   root.appendChild(h('a', {
     class: 'tool-card', href: BUNPOU_URL, target: '_blank', rel: 'noopener'
   },
-    h('span', { class: 'tool-seal mincho', 'aria-hidden': 'true', text: '文' }),
+    h('span', { class: 'tool-seal seal-bunpou', 'aria-hidden': 'true', text: '文' }),
     h('span', { class: 'tool-txt' },
       h('b', { text: 'Bunpou Lab — Gramática japonesa' }),
       h('span', { text: 'Sessões de gramática do N5 com revisão espaçada. Abre em nova guia; seu progresso aqui continua intacto.' })
@@ -143,7 +143,7 @@ function resumeCard(app, r) {
   const meta = [];
   meta.push(m.byTime ? `${m.answered} ${m.answered === 1 ? 'questão respondida' : 'questões respondidas'}`
                      : `${m.answered} de ${m.total} questões`);
-  if (m.time) meta.push(`${m.time} estudados${m.byTime && m.minutes ? ` de ${m.minutes} min` : ''}`);
+  if (m.time) meta.push(`${m.time} de sessão${m.byTime && m.minutes ? ` · meta ${m.minutes} min` : ''}`);
   if (m.savedAt) {
     const d = Math.floor((Date.now() - m.savedAt) / 86400000);
     meta.push(`salva ${d <= 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d} dias`}`);

@@ -19,12 +19,18 @@ window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change',
 });
 
 /* ---------------- sessão em andamento: relógio e gravação ----------------
-   O relógio é de TEMPO ESTUDADO (ver Session.pause/resumeClock). Aqui ficam
-   só os gatilhos do navegador:
-   · pulso de 1 s (heartbeat) — o excesso de um intervalo longo sem pulso
-     (sistema dormindo) não conta; a cada 10 s de estudo a sessão é gravada;
-   · página oculta / fechada / congelada — pausa e grava na hora. Não se
-     depende só de beforeunload, que o celular frequentemente não dispara. */
+   O relógio conta o tempo da SESSÃO ABERTA (ver Session.pause/resumeClock).
+   Aba oculta não é sessão encerrada: trocar de aba, minimizar o navegador
+   ou abrir outro aplicativo NÃO pausa. Como elapsedMs é calculado por
+   tempo absoluto (agora − startedAt), o navegador reduzir ou suspender os
+   timers em segundo plano não afeta a contagem.
+   Gatilhos do navegador:
+   · a cada 10 s de sessão, grava (sem disparar a sincronização);
+   · aba oculta, `freeze` e `beforeunload`: só gravam na hora — o sistema
+     pode descartar a aba em segundo plano;
+   · `pagehide` (página descarregada: aba/navegador fechados, atualização,
+     navegação para outro site): pausa e grava; se a página voltar do
+     bfcache (`pageshow`), o relógio segue sem somar o intervalo fora. */
 const activeSession = () => {
   const s = app.session;
   return s && s.phase !== 'done' && typeof s.pause === 'function' ? s : null;
@@ -32,22 +38,25 @@ const activeSession = () => {
 let lastQuietSave = 0;
 setInterval(() => {
   const s = activeSession();
-  if (!s || app.view !== 'practice') return;
-  s.heartbeat();
-  if (!s.paused && Date.now() - lastQuietSave >= 10_000) { s.saveQuiet(); lastQuietSave = Date.now(); }
+  if (!s || app.view !== 'practice' || s.paused) return;
+  if (Date.now() - lastQuietSave >= 10_000) { s.saveQuiet(); lastQuietSave = Date.now(); }
 }, 1000);
-function pauseAndSave() {
+function saveNow() { activeSession()?.saveQuiet(); }
+let unloaded = false;
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
+document.addEventListener('freeze', saveNow);
+window.addEventListener('beforeunload', saveNow);
+window.addEventListener('pagehide', () => {
   const s = activeSession();
   if (!s) return;
-  s.heartbeat(); s.pause(); s.saveQuiet();
-}
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') pauseAndSave();
-  else if (activeSession() && app.view === 'practice' && !app.dialog) activeSession().resumeClock();
+  s.pause(); s.saveQuiet(); unloaded = true;
 });
-window.addEventListener('pagehide', pauseAndSave);
-window.addEventListener('beforeunload', pauseAndSave);
-document.addEventListener('freeze', pauseAndSave);
+window.addEventListener('pageshow', () => {
+  if (!unloaded) return;
+  unloaded = false;
+  const s = activeSession();
+  if (s && app.view === 'practice' && !app.dialog) s.resumeClock();
+});
 
 /* Outra aba gravou o progresso: esta aba recarrega o estado (para nunca
    gravar por cima do que a outra gravou) e, se a sessão aberta aqui foi

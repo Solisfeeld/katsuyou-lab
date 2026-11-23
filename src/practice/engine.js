@@ -44,7 +44,6 @@ export class Session {
        parado, então o intervalo pausado nunca entra na conta. */
     this.startedAt = Date.now();
     this.pausedAt = null;
-    this._beat = this.startedAt;
     this.id = this.config.id || newSessionId();
     this.answered = 0;
     this.correct = 0;
@@ -75,25 +74,19 @@ export class Session {
     if (!this.config.__restore) this.next();
   }
 
-  /* ---------------- relógio (tempo estudado) ---------------- */
+  /* ---------------- relógio da sessão ----------------
+     Conta o tempo da SESSÃO ABERTA: aba oculta, navegador minimizado ou
+     outro aplicativo à frente não pausam. Pausa só fora da tela de
+     exercício (Ajustes, início) e quando a página é descarregada (aba ou
+     navegador fechados, página atualizada). A pausa desloca startedAt
+     para frente pelo tempo parado, então esse intervalo nunca é somado. */
   pause(now = Date.now()) {
     if (this.pausedAt == null) this.pausedAt = now;
   }
   resumeClock(now = Date.now()) {
     if (this.pausedAt != null) { this.startedAt += now - this.pausedAt; this.pausedAt = null; }
-    this._beat = now;
   }
   get paused() { return this.pausedAt != null; }
-  /* Pulso periódico da tela. Se entre dois pulsos passou mais que
-     CLOCK_MAX_GAP (computador dormindo com a página aberta, timers
-     congelados sem evento de visibilidade), o excesso não é tempo estudado. */
-  heartbeat(now = Date.now()) {
-    if (this.pausedAt == null) {
-      const gap = now - this._beat;
-      if (gap > CLOCK_MAX_GAP) this.startedAt += gap - CLOCK_MAX_GAP;
-    }
-    this._beat = now;
-  }
 
   /* ---------------- limites da sessão (§32) ----------------
      O tempo é uma META de duração, não um corte seco. Atingir a meta e
@@ -406,8 +399,7 @@ export class Session {
       if (!resume.queue?.length) return null;
       const s = new Session({ ...resume.config, queue: resume.queue });
       copyCounters(s, resume);
-      s.startedAt = Date.now();        // v1 não guardava o tempo estudado
-      s._beat = s.startedAt;
+      s.startedAt = Date.now();        // v1 não guardava o tempo da sessão
       return s;
     }
     const valid = x => x && verbById(x.verbId) && (x.form === 'group' || FORMS.includes(x.form));
@@ -417,7 +409,7 @@ export class Session {
       if (!rest.length) return null;
       const s = new Session({ ...resume.config, id: resume.id, queue: rest });
       copyCounters(s, resume);
-      s.startedAt = Date.now() - (resume.elapsedMs || 0); s._beat = Date.now();
+      s.startedAt = Date.now() - (resume.elapsedMs || 0);
       return s;
     }
     const s = new Session({ ...resume.config, id: resume.id, queue: rest, __restore: true });
@@ -440,7 +432,6 @@ export class Session {
     /* o relógio continua do tempo estudado salvo — o intervalo com o app
        fechado não conta */
     s.startedAt = Date.now() - (resume.elapsedMs || 0);
-    s._beat = Date.now();
     return s;
   }
 }
@@ -448,7 +439,6 @@ export class Session {
 /* Identifica esta aba: quem retoma uma sessão passa a ser o dono dela, e
    outra aba que estivesse com a mesma sessão aberta a larga. */
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-export const CLOCK_MAX_GAP = 15_000;
 function newSessionId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
 function openItem(item) {

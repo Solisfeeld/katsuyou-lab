@@ -46,7 +46,7 @@ como formas-alvo. A justificativa completa está em [AUDITORIA.md](AUDITORIA.md)
 - **Repetir atividades erradas na mesma sessão** (Ajustes, ligado por padrão): o erro volta uma vez, 3 a 7 questões depois, sem laço. A nota final é a da primeira tentativa, e o reforço aparece à parte.
 - **Feedback com a resposta exata:** o que você digitou (inclusive em branco ou "Não sei") ao lado da resposta correta.
 - **Kanji com furigana** nas formas verbais, usando o mesmo conjunto de kanji autorizados do Bunpou Lab. Hiragana continua aceito na resposta.
-- **Sessões interrompidas:** fechar a aba, o navegador ou atualizar a página salva o treino exatamente onde parou: questão, texto digitado, dicas abertas, feedback, fila (com os erros que voltariam) e tempo estudado. A tela inicial oferece **Continuar sessão anterior** ou **Descartar** (com confirmação), e nada é retomado sozinho. O cronômetro conta tempo estudado: pausa com a página oculta e não soma o tempo com o app fechado. Ver [docs/sessoes-interrompidas.md](docs/sessoes-interrompidas.md).
+- **Sessões interrompidas:** fechar a aba, o navegador ou atualizar a página salva o treino exatamente onde parou: questão, texto digitado, dicas abertas, feedback, fila (com os erros que voltariam) e tempo de sessão. A tela inicial oferece **Continuar sessão anterior** ou **Descartar** (com confirmação), e nada é retomado sozinho. O cronômetro conta o tempo da sessão aberta: trocar de aba ou minimizar o navegador não pausa; só fechar ou atualizar a página interrompe, e esse período não é somado. Ver [docs/sessoes-interrompidas.md](docs/sessoes-interrompidas.md).
 
 Detalhes em [docs/repetir-erros-tari-furigana.md](docs/repetir-erros-tari-furigana.md). Sistema visual (compartilhado com o Bunpou Lab): [docs/design-system.md](docs/design-system.md).
 
@@ -77,6 +77,7 @@ Teste em navegador real das sessões interrompidas (Playwright; serve o `dist/`)
 ```bash
 npm run build && python3 -m http.server 8767 --bind 127.0.0.1 --directory dist
 python e2e/retomada.py http://127.0.0.1:8767/
+python e2e/cronometro.py --app katsuyou --url http://127.0.0.1:8767/   # tempos reais do cronômetro
 ```
 
 Simulação de semanas de uso (relógio virtual, sementes fixas):
@@ -202,7 +203,7 @@ katsuyou-lab/
 ├── package.json · vite.config.js · netlify.toml
 ├── AUDITORIA.md              auditoria das fontes Rikai
 ├── docs/                     progressão, repetição, たり, furigana, sessões, sistema visual
-├── e2e/retomada.py           sessões interrompidas em navegador real
+├── e2e/                      retomada.py e cronometro.py (navegador real)
 ├── scripts/
 │   ├── check-content.js      guardião da integridade do conteúdo
 │   ├── audit-feedback.js     relatório pedagógico do §53

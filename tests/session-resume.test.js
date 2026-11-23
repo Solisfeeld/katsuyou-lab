@@ -142,45 +142,49 @@ test('ordem da fila e fila de reforço preservadas', () => {
   assert.equal(`${app.session.current.verbId}|${app.session.current.form}`, fila[0].replace('*', ''));
 });
 
-test('cronômetro: continua do tempo estudado e não conta o tempo com o app fechado', () => {
+test('cronômetro: continua do tempo salvo e não conta o tempo com o app fechado', () => {
   reset();
   start(Q, { limitKind: 'time', minutes: 30, length: 60 });
-  for (let k = 0; k < 23 * 60 + 15; k++) { NOW += 1000; app.session.heartbeat(); }   // 23:15 estudando
+  NOW += (23 * 60 + 15) * 1000;                       // 23:15 de sessão aberta
   app.session.saveQuiet();
   assert.equal(Math.round(store.getState().resume.elapsedMs / 1000), 23 * 60 + 15);
   reopen();
   NOW += 2 * DAY;                                     // fechado por dois dias
-  assert.ok(text().includes('23:15 estudados'));
+  assert.ok(text().includes('23:15 de sessão'));
   root.querySelector('[data-resume="continue"]').click();
   assert.equal(Math.round(app.session.elapsedMs / 1000), 23 * 60 + 15, 'parte de 23:15');
   NOW += 10_000;
   assert.equal(Math.round(app.session.elapsedMs / 1000), 23 * 60 + 25, 'e volta a contar');
 });
 
-test('pausa: página oculta, fora da tela de exercício e diálogo aberto', () => {
+test('aba oculta NÃO pausa; Ajustes e página descarregada pausam', () => {
   reset();
   start();
   const s = app.session;
   const t0 = s.elapsedMs;
-  /* página oculta */
+  /* aba oculta / navegador minimizado: a sessão continua aberta e o tempo corre */
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  document.dispatchEvent(new window.Event('visibilitychange'));
   app.render();
-  NOW += 5 * MIN;
-  assert.equal(s.elapsedMs, t0, 'oculta: não conta');
+  NOW += 10 * MIN;                                   // timers suspensos: nenhum pulso
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+  document.dispatchEvent(new window.Event('visibilitychange'));
   app.render();
-  NOW += 1000;
-  assert.equal(s.elapsedMs, t0 + 1000, 'visível: volta a contar');
-  /* Ajustes por cima da sessão */
+  assert.equal(s.elapsedMs, t0 + 10 * MIN, 'os 10 minutos em segundo plano contam, inteiros');
+  /* Ajustes por cima da sessão: pausa (interrupção voluntária, como no Bunpou) */
   app.go('settings');
   NOW += 3 * MIN;
-  assert.equal(s.elapsedMs, t0 + 1000, 'fora da tela de exercício: pausa');
-  /* intervalo sem pulso (sistema dormindo com a página aberta) */
+  assert.equal(s.elapsedMs, t0 + 10 * MIN, 'fora da tela de exercício: pausa');
   app.view = 'practice'; app.render();
-  s.heartbeat();
-  NOW += 10 * MIN;
-  s.heartbeat();
-  assert.ok(s.elapsedMs - (t0 + 1000) <= 15_000, 'no máximo 15 s de um intervalo sem pulso');
+  NOW += 1000;
+  assert.equal(s.elapsedMs, t0 + 10 * MIN + 1000, 'de volta ao exercício: conta de novo');
+  /* página descarregada (pagehide): pausa e não soma o intervalo fora */
+  s.pause();
+  NOW += 7 * MIN;
+  assert.equal(s.elapsedMs, t0 + 10 * MIN + 1000, 'descarregada: não conta');
+  s.resumeClock();
+  NOW += 2000;
+  assert.equal(s.elapsedMs, t0 + 10 * MIN + 3000, 'sem contagem duplicada');
 });
 
 test('dica aberta sobrevive ao fechamento (o acerto continua valendo como “com dica”)', () => {

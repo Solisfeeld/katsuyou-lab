@@ -367,9 +367,19 @@ rt{font-size:.5em;font-weight:500;letter-spacing:0;}
 .brand{gap:11px;flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;}
 /* Logotipo: só o ideograma no círculo, centralizado, sem ornamento. A cor é
    FIXA nos dois temas (a mesma do favicon), para o símbolo não mudar. */
-.brand .seal{position:relative;width:34px;height:34px;background:#2C6E77;color:#fff;font-size:17px;font-weight:700;
-  line-height:1;display:grid;place-items:center;padding:0 0 1px;
-  box-shadow:0 0 0 3px var(--card),0 0 0 4px var(--line);}
+/* Logotipos: o desenho original — círculo sólido com anel fino interno (o
+   mesmo do favicon), ideograma em gótico 800 centralizado. Sem anel externo,
+   sem flor. Cores de identidade FIXAS: Bunpou vermelho/coral, Katsuyou azul;
+   no tema escuro, um tom mais claro da mesma cor para destacar do fundo. */
+.brand .seal,.tool-seal{display:grid;place-items:center;flex:none;border-radius:50%;color:#FBF7EE;line-height:1;
+  font-family:"Zen Kaku Gothic New",system-ui,"Hiragino Sans","Noto Sans JP",sans-serif;font-weight:800;
+  box-shadow:inset 0 0 0 1.5px rgba(251,247,238,.42);}
+.brand .seal{position:relative;width:34px;height:34px;font-size:17px;padding:0;}
+.tool-seal{width:40px;height:40px;font-size:19px;}
+.seal.seal-bunpou,.tool-seal.seal-bunpou{background:#C33C2A;}
+.seal.seal-katsuyou,.tool-seal.seal-katsuyou{background:#20395B;}
+html[data-theme="dark"] .seal.seal-bunpou,html[data-theme="dark"] .tool-seal.seal-bunpou{background:#D24A36;}
+html[data-theme="dark"] .seal.seal-katsuyou,html[data-theme="dark"] .tool-seal.seal-katsuyou{background:#2F5488;}
 .brand-txt b{font-size:15px;}
 .brand-txt span{margin-top:2px;font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;}
 .icon-btn,.topbtn{border-radius:999px;background:var(--card);border-color:var(--line-strong);}
@@ -445,8 +455,7 @@ html[data-theme="dark"] .session-go{color:#1f3b44;}
   background:var(--card);color:var(--ink);text-decoration:none;box-shadow:var(--shadow-sm);transition:border-color .15s,transform .15s var(--ease);}
 .tool-card:hover{border-color:var(--sakura);transform:translateY(-1px);}
 .tool-card:focus-visible{outline:2px solid var(--ai-2);outline-offset:3px;}
-.tool-seal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#2D4A70;color:#fff;line-height:1;font-size:18px;
-  box-shadow:0 0 0 3px var(--card),0 0 0 4px var(--line);}
+
 .tool-txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .tool-txt b{font-size:15px;}
 .tool-txt span{font-size:13px;color:var(--ink-soft);line-height:1.5;}
@@ -637,6 +646,8 @@ html[data-theme="dark"] .btn-shu,html[data-theme="dark"] .btn-shu:hover{color:#1
 
 /* barra superior: mesma altura e mesmos controles nos dois apps */
 .topbar-in{min-height:56px;padding-top:10px;padding-bottom:10px;}
+.topbar-in{max-width:940px;padding-left:18px;padding-right:18px;}
+@media (max-width:640px){ .topbar-in{padding-left:12px;padding-right:12px;} }
 .iconbtn,.topbtn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:6px 14px;
   border-radius:999px;font-size:12.5px;font-weight:700;}
 .icon-btn,.iconbtn.sq{width:36px;height:36px;min-height:36px;padding:0;border-radius:999px;display:inline-grid;place-items:center;font-size:15px;}
@@ -648,6 +659,52 @@ html[data-theme="dark"] .btn-shu,html[data-theme="dark"] .btn-shu:hover{color:#1
   .iconbtn:not(.sq),.topbtn{width:36px;padding:0;}
 }
 
+/* Diálogo: o botão selecionado (teclado: abre em "confirmar"; setas/Tab
+   alternam) ACENDE — fundo mais intenso, contraste reforçado e um brilho
+   difuso do próprio botão. Sem anel, sem contorno externo, sem pulsar. O
+   outro botão fica levemente apagado, para não haver dúvida de qual recebe
+   o Enter. */
+.modal .btn,.modal .btn:focus,.modal .btn:focus-visible{outline:none;}
+.modal .btn:focus-visible{box-shadow:none;border-color:var(--line-strong);}
+.modal .btn-shu:focus-visible{border-color:var(--shu);}
+.modal .btn{transition:background .15s var(--ease),color .15s var(--ease),box-shadow .2s var(--ease),filter .15s var(--ease),opacity .15s var(--ease);}
+.modal .btn-shu.msel{background:#DE5638;border-color:#DE5638;color:#fff;
+  box-shadow:0 8px 22px -6px rgba(222,86,56,.72),0 0 16px -2px rgba(222,86,56,.45);}
+html[data-theme="dark"] .modal .btn-shu.msel{background:#FF8E70;border-color:#FF8E70;color:#121319;
+  box-shadow:0 8px 24px -6px rgba(255,142,112,.6),0 0 18px -2px rgba(255,142,112,.4);}
+.modal .btn-ghost.msel{background:color-mix(in srgb,var(--ai) 15%,var(--card));border-color:transparent;color:var(--ai);font-weight:800;
+  box-shadow:0 8px 20px -8px color-mix(in srgb,var(--ai) 55%,transparent),0 0 16px -4px color-mix(in srgb,var(--ai) 38%,transparent);}
+html[data-theme="dark"] .modal .btn-ghost.msel{background:color-mix(in srgb,var(--ai) 24%,var(--card));color:var(--ai-2);}
+.modal-act:has(.msel) .btn:not(.msel){opacity:.72;filter:saturate(.8);}
+
+/* ---- tela de exercício: a composição do Bunpou Lab, usada pelos dois ----
+   barra de sessão → cabeçalho da etapa → cartão (etiquetas, enunciado,
+   resposta, ações, feedback) → "Encerrar sessão" abaixo do cartão. */
+.sessbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.pbar{flex:1;min-width:140px;height:6px;background:color-mix(in srgb,var(--line) 85%,transparent);border:0;border-radius:4px;overflow:hidden;}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--ai),var(--ai-2));border-radius:4px;transition:width .3s ease;}
+.stagehead{position:relative;display:flex;align-items:flex-start;gap:16px;margin-bottom:14px;min-height:34px;}
+.sh-txt b{display:block;line-height:1.35;font-size:15px;}
+.sh-txt .muted{display:block;margin-top:1px;font-size:13px;color:var(--ink-faint);}
+.qcard{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:22px 24px;}
+.qtop{position:relative;padding:0 0 12px;margin:-2px 0 16px;border-bottom:1px solid var(--line);}
+.qtags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;}
+.qtags .chip{font-size:11.5px;padding:2px 10px;line-height:1.55;border-width:1px;}
+.qactions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
+.fb{position:relative;border:1px solid transparent;border-left-width:4px;border-radius:var(--radius-lg);padding:16px 18px 14px;margin-top:16px;color:var(--ink);}
+.fb.good{background:color-mix(in srgb,var(--midori-wash) 70%,var(--card));border-color:var(--midori);}
+.fb.bad{background:color-mix(in srgb,var(--shu-wash) 65%,var(--card));border-color:var(--shu);}
+.fb.idk{background:var(--card-2);border-color:var(--line-strong);border-left-color:var(--gold);}
+.fb .verdict{font-weight:800;font-size:15px;margin-bottom:9px;}
+.fb.good .verdict{color:var(--midori);} .fb.bad .verdict{color:var(--shu);} .fb.idk .verdict{color:var(--ink);}
+.fb .fline{font-size:13.5px;line-height:1.9;padding-top:9px;margin-top:9px;border-top:1px dashed color-mix(in srgb,var(--line-strong) 70%,transparent);}
+.fb .verdict + .fline{border-top:0;padding-top:0;margin-top:0;}
+.fb .fline .fl-t{display:block;font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:2px;}
+.foot{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-faint);font-size:12px;text-align:center;}
+/* largura e margens do conteúdo, iguais nos dois apps */
+.wrap{max-width:940px;margin:0 auto;padding:0 18px calc(90px + env(safe-area-inset-bottom));}
+@media (max-width:760px){ .qcard{padding:18px 16px;} .wrap{padding:0 14px calc(80px + env(safe-area-inset-bottom));} }
+
 /* campos */
 .numin{width:76px;min-height:38px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card-2);color:var(--ink);
   padding:6px 9px;text-align:center;font-weight:700;font-size:14px;}
@@ -656,4 +713,62 @@ html[data-theme="dark"] .btn-shu,html[data-theme="dark"] .btn-shu:hover{color:#1
 @media (max-width:560px){
   .card.pad{padding:17px 16px;}
   .choice-group,.btn-trio{grid-template-columns:1fr;}
+}
+
+/* ===================================================================
+   TELA DE EXERCÍCIO DO KATSUYOU — conteúdo próprio (resposta digitada)
+   sobre a composição compartilhada com o Bunpou Lab (bloco acima).
+   =================================================================== */
+.practice .session-bar{margin:0 0 16px;}
+.sess-count{font-size:13px;color:var(--ink-faint);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.session-count{font-weight:700;color:var(--ink-soft);}
+.session-count.over{color:var(--shu);font-weight:800;}
+.pbar.over i,.pbar i.over{background:var(--shu);}
+.qtags .chip-form{background:var(--wash,var(--ai-wash));border-color:transparent;color:var(--fc,var(--ai));font-weight:700;}
+.qtags .chip-reforco{background:var(--gold-wash);border-color:transparent;color:var(--gold);}
+.qtags .chip rt{font-size:.6em;}
+.qprompt{font-size:17.5px;line-height:1.8;margin:0 0 2px;color:var(--ink);}
+.qprompt b{font-weight:800;}
+/* verbo em destaque, proporcional ao cartão (não mais gigante e centralizado) */
+.kverb{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 14px;margin:2px 0 2px;}
+.kverb .q-prompt{margin:0;font-size:34px;font-weight:700;line-height:1.55;letter-spacing:.02em;text-align:left;}
+.kverb .q-prompt rt{font-size:.4em;}
+.kverb .q-meaning{margin:0;text-align:left;font-size:14px;color:var(--ink-faint);}
+/* campo de resposta: o .tin do Bunpou Lab */
+.answer.tin{display:block;width:100%;margin-top:15px;border:1.5px solid var(--line-strong);border-radius:11px;
+  background:var(--card-2);color:var(--ink);padding:13px 15px;font-family:"Zen Kaku Gothic New",system-ui,sans-serif;
+  font-size:19px;font-weight:500;letter-spacing:.02em;text-align:left;transition:border-color .15s var(--ease),box-shadow .15s var(--ease);}
+.answer.tin:focus{outline:none;border-color:var(--ai);background:var(--card);box-shadow:var(--focus-ring);}
+.answer.tin::placeholder{font-size:15px;color:var(--ink-faint);opacity:.7;letter-spacing:0;}
+.group-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:16px;}
+.group-opts .btn{min-height:52px;}
+/* dica: o bloco de apoio do Bunpou */
+.hint{margin-top:14px;border:0;border-radius:10px;background:var(--gold-wash);padding:11px 14px;font-size:13.5px;color:var(--ink);}
+.hint b{display:block;margin-bottom:3px;color:var(--gold);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+/* feedback: linhas rotuladas, como no Bunpou */
+.fb .verdict{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.fb .verdict .tag{font-size:11px;}
+.fb .fl-ans{display:block;font-family:"Shippori Mincho",Georgia,serif;font-size:19px;font-weight:700;line-height:1.75;color:var(--ink);overflow-wrap:anywhere;}
+.fb .fl-ans.wrong{color:var(--shu);}
+.fb .fl-ans.wrong .typed{text-decoration:line-through;text-decoration-thickness:1px;}
+.fb .fl-ans.ctx{font-size:16px;color:var(--ink-soft);}
+.fb .fl-ans.none{font-family:inherit;font-size:14px;font-weight:600;}
+.fb .fl-ans .arrow{color:var(--ink-faint);font-size:.8em;}
+.fb .fl-ans .jp,.fb .step-val .jp,.fb .rel-line .jp,.fb .rule-line .jp,.fb .exc-line .jp{font-size:inherit;font-weight:inherit;}
+.fb .fl-ans rt,.fb .steps rt,.fb .rel-line rt,.fb .rule-line rt{font-size:.5em;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:500;}
+.fb .fl-note{margin:4px 0 0;font-size:12.8px;font-weight:600;color:var(--midori);}
+.fb .diag-lead{display:block;font-weight:700;color:var(--ink);}
+.fb .diag-det{display:block;color:var(--ink-soft);}
+.fb .steps{margin:2px 0 0;padding:0;border:0;background:none;}
+.fb .step-val{font-size:18px;line-height:1.6;}
+.fb .rule-line,.fb .exc-line,.fb .rel-line{display:inline;margin:0;padding:0;border:0;border-radius:0;background:none;font-size:13.5px;font-weight:600;color:var(--ink);}
+.fb .exc-line{color:var(--shu);}
+.fb .rel-line{font-weight:500;color:var(--ink-soft);}
+.fb .src-line{margin:10px 0 0;font-size:11.5px;color:var(--ink-faint);}
+@media (max-width:480px){ .kverb .q-prompt{font-size:30px;} .group-opts{grid-template-columns:1fr;} }
+/* celular estreito: Responder na largura toda e Dica + Não sei dividindo a
+   linha de baixo (só no grupo de três; "Próxima" fica como o "Continuar") */
+@media (max-width:420px){
+  .practice .qactions:has(.btn-ghost) .btn{flex:1 1 auto;padding-left:12px;padding-right:12px;}
+  .practice .qactions:has(.btn-ghost) .btn-primary{flex-basis:100%;}
 }

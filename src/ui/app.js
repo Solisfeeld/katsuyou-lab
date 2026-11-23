@@ -59,6 +59,20 @@ export class App {
       document.addEventListener('click', () => {
         if (this.acctOpen) { this.acctOpen = false; this.render(); }
       });
+      /* Diálogo aberto: setas e Tab alternam o botão selecionado, Enter
+         confirma o SELECIONADO — mesmo comportamento do Bunpou Lab. Na fase
+         de captura, para que nada chegue aos atalhos da tela por baixo. */
+      document.addEventListener('keydown', e => {
+        if (!this.dialog || e.isComposing || e.keyCode === 229) return;
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') {
+          e.preventDefault(); e.stopPropagation();
+          this.dialogSel = this.dialogSel === 'ok' ? 'cancel' : 'ok';
+          this.paintDialogSel();
+        } else if (e.key === 'Enter') {
+          e.preventDefault(); e.stopPropagation();
+          if (!e.repeat) this.closeDialog(this.dialogSel === 'ok');
+        }
+      }, true);
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && this.dialog) { e.preventDefault(); this.closeDialog(); return; }
         if (e.key === 'Escape' && this.acctOpen) { this.acctOpen = false; this.render(); }
@@ -265,6 +279,7 @@ export class App {
   /* ---------------- diálogo de confirmação ---------------- */
   askConfirm({ title, body, ok = 'Confirmar', cancel = 'Cancelar', danger = false, onOk }) {
     this.dialog = { title, body, ok, cancel, danger, onOk };
+    this.dialogSel = 'ok';                    // abre com a ação selecionada
     this.render();
   }
   closeDialog(run) {
@@ -276,10 +291,15 @@ export class App {
   dialogNode() {
     const d = this.dialog;
     if (!d) return null;
+    const sel = this.dialogSel || 'ok';
     const okBtn = h('button', {
-      class: `btn ${d.danger ? 'btn-shu' : 'btn-primary'}`, 'data-dialog': 'ok',
+      class: `btn ${d.danger ? 'btn-shu' : 'btn-primary'}${sel === 'ok' ? ' msel' : ''}`, 'data-dialog': 'ok',
       onclick: () => this.closeDialog(true)
     }, d.ok);
+    const cancelBtn = h('button', {
+      class: `btn btn-ghost${sel === 'cancel' ? ' msel' : ''}`, 'data-dialog': 'cancel',
+      onclick: () => this.closeDialog()
+    }, d.cancel);
     const node = h('div', {
       class: 'overlay show', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dlg-t',
       onclick: e => { if (e.target === node) this.closeDialog(); }
@@ -287,14 +307,20 @@ export class App {
       h('div', { class: 'modal' },
         h('h3', { id: 'dlg-t', text: d.title }),
         h('p', { text: d.body }),
-        h('div', { class: 'modal-act' },
-          h('button', { class: 'btn btn-ghost', 'data-dialog': 'cancel', onclick: () => this.closeDialog() }, d.cancel),
-          okBtn
-        )
+        h('div', { class: 'modal-act' }, cancelBtn, okBtn)
       )
     );
-    queueMicrotask?.(() => { try { okBtn.focus(); } catch {} });
+    queueMicrotask?.(() => { try { (sel === 'ok' ? okBtn : cancelBtn).focus({ preventScroll: true }); } catch {} });
     return node;
+  }
+  /* Só troca a marca de seleção e o foco, sem redesenhar a tela. */
+  paintDialogSel() {
+    const ok = this.root.querySelector('[data-dialog="ok"]');
+    const cancel = this.root.querySelector('[data-dialog="cancel"]');
+    if (!ok || !cancel) return;
+    ok.classList.toggle('msel', this.dialogSel === 'ok');
+    cancel.classList.toggle('msel', this.dialogSel === 'cancel');
+    try { (this.dialogSel === 'ok' ? ok : cancel).focus({ preventScroll: true }); } catch {}
   }
 
   endSession(session) {
@@ -338,13 +364,12 @@ export class App {
       default: body = renderHome(this);
     }
 
-    /* Relógio de tempo estudado: corre só com a tela de exercício à vista
-       (sem diálogo por cima e com a página visível). Fora dela — Ajustes,
-       início, outra aba, app minimizado — a sessão fica pausada. */
+    /* Relógio da sessão: corre enquanto a tela de exercício estiver aberta —
+       inclusive com a aba oculta ou o navegador minimizado. Pausa só fora
+       dela (Ajustes, início) ou com um diálogo por cima, como no Bunpou Lab. */
     const sess = this.session;
     if (sess && sess.phase !== 'done' && typeof sess.pause === 'function') {
-      const visivel = typeof document === 'undefined' || document.visibilityState !== 'hidden';
-      if (this.view === 'practice' && visivel && !this.dialog) sess.resumeClock(); else sess.pause();
+      if (this.view === 'practice' && !this.dialog) sess.resumeClock(); else sess.pause();
     }
 
     mount(this.root, this.topbar(), body, this.dialogNode());
@@ -370,7 +395,7 @@ export class App {
             } else this.go('home');
           }
         },
-          h('span', { class: 'seal mincho', 'aria-hidden': 'true', text: '活' }),
+          h('span', { class: 'seal seal-katsuyou', 'aria-hidden': 'true', text: '活' }),
           h('span', { class: 'brand-txt' },
             h('b', { text: '活用ラボ' }),
             h('span', { text: 'Katsuyou Lab · Conjugação' })

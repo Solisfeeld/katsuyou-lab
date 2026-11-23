@@ -11,6 +11,14 @@ import { FORM_SHORT, FORM_LABEL, GROUP_LABEL } from '../conjugation/rules.js';
 import { getState } from '../progress/store.js';
 import { rubyParts, kanjiSpelling } from '../conjugation/furigana.js';
 
+/* Composição: a mesma do Bunpou Lab — barra da sessão, cabeçalho, cartão
+   (etiquetas · enunciado · resposta · ações · feedback) e "Encerrar sessão"
+   abaixo do cartão. O conteúdo é o da conjugação: resposta digitada. */
+const MODE_HEAD = {
+  mixed: 'Sessão mista', form: 'Treinar uma forma', group: 'Treinar grupos',
+  weak: 'Pontos fracos', review: 'Revisar erros'
+};
+
 export function renderPractice(app, session) {
   const root = h('div', { class: 'wrap' });
 
@@ -21,32 +29,43 @@ export function renderPractice(app, session) {
     return renderEnd(app, session);
   }
 
-  root.appendChild(sessionBar(app, session));
-
   const cur = session.current;
   const res = session.lastResult;
   const settings = getState().settings;
+  const body = h('div', { class: 'practice', style: { padding: '20px 0 0' } });
+
+  body.appendChild(sessionBar(app, session));
+  body.appendChild(h('div', { class: 'stagehead' },
+    h('div', { class: 'sh-txt' },
+      h('b', { text: MODE_HEAD[session.config.mode] || 'Sessão' }),
+      h('span', { class: 'muted', text: cur.isGroupQuestion
+        ? 'Identifique o grupo do verbo pela forma ます.'
+        : 'Escreva a forma pedida a partir da forma ます.' })
+    )
+  ));
 
   const card = h('div', { class: 'qcard' });
 
-  /* ---- pergunta ---- */
-  card.appendChild(h('p', { class: 'q-prompt mincho' }, jpVerb(cur.verbId, cur.prompt)));
-  card.appendChild(h('p', { class: 'q-meaning', text: cur.meaning }));
-
-  const ask = h('div', { class: 'q-ask' });
-  if (cur.isGroupQuestion) {
-    ask.appendChild(h('div', { class: 'lbl', text: 'Pergunta' }));
-    ask.appendChild(h('div', { class: 'val', style: { '--wash': 'var(--card-2)', '--fc': 'var(--ink)' }, text: 'Qual é o grupo?' }));
-  } else {
-    ask.appendChild(h('div', { class: 'lbl', text: 'Forma pedida' }));
-    ask.appendChild(h('div', { class: 'val', style: formVars(cur.form) }, jpText(FORM_LABEL[cur.form])));
-  }
-  card.appendChild(ask);
-
+  /* ---- etiquetas (como as do Bunpou): forma pedida, grupo, reforço ---- */
+  const tags = h('div', { class: 'qtags' });
+  if (cur.isGroupQuestion) tags.appendChild(h('span', { class: 'chip', text: 'Qual é o grupo?' }));
+  else tags.appendChild(h('span', { class: 'chip chip-form', style: formVars(cur.form) }, jpText(FORM_LABEL[cur.form])));
   /* §14 — o grupo pode ser escondido durante o exercício. */
   if (!cur.isGroupQuestion && !settings.hideGroup) {
-    card.appendChild(h('p', { class: 'q-group', text: GROUP_LABEL[cur.verb.group] }));
+    tags.appendChild(h('span', { class: 'chip q-group', text: GROUP_LABEL[cur.verb.group] }));
   }
+  if (cur.requeued) tags.appendChild(h('span', { class: 'chip chip-reforco', text: 'reforço' }));
+  card.appendChild(h('div', { class: 'qtop' }, tags));
+
+  /* ---- enunciado: o pedido em texto e o verbo em destaque proporcional ---- */
+  card.appendChild(h('div', { class: 'qprompt' },
+    cur.isGroupQuestion ? 'A qual grupo pertence este verbo?'
+      : h('span', {}, 'Escreva a ', h('b', {}, jpText(FORM_LABEL[cur.form])), ' de:')
+  ));
+  card.appendChild(h('div', { class: 'kverb' },
+    h('p', { class: 'q-prompt mincho' }, jpVerb(cur.verbId, cur.prompt)),
+    h('p', { class: 'q-meaning', text: cur.meaning })
+  ));
 
   /* ---- resposta ---- */
   if (session.phase === 'asking') {
@@ -55,16 +74,17 @@ export function renderPractice(app, session) {
     card.appendChild(feedbackBlock(app, session, res));
   }
 
-  root.appendChild(card);
+  body.appendChild(card);
 
   /* Saída da sessão: o mesmo botão fantasma, fora do cartão, do Bunpou Lab */
-  root.appendChild(h('div', { class: 'row', style: { marginTop: '18px', justifyContent: 'center' } },
+  body.appendChild(h('div', { class: 'foot' },
     h('button', {
       class: 'btn btn-ghost',
       onclick: () => app.endSession(session)
     }, 'Encerrar sessão')
   ));
 
+  root.appendChild(body);
   return root;
 }
 
@@ -80,9 +100,10 @@ function clock(ms, mode = 'down') {
 
 function sessionBar(app, session) {
   const byTime = session.config.limitKind === 'time';
-  const rail = h('div', { class: 'progress-rail' });
+  const rail = h('div', { class: 'pbar progress-rail' });
   const fill = h('i');
   const label = h('span', { class: 'session-count' });
+  const meta = h('span', { class: 'muted session-meta' });
   rail.appendChild(fill);
 
   /* Repinta SÓ o mostrador e a barra. Nunca reconstrói o exercício: o
@@ -98,6 +119,7 @@ function sessionBar(app, session) {
       fill.style.width = over
         ? '100%'
         : `${Math.min(100, ((session.plannedMs - session.remainingMs) / session.plannedMs) * 100)}%`;
+      meta.textContent = over ? ' · meta atingida' : ` · meta ${session.config.minutes} min`;
       label.classList.toggle('over', over);
       rail.classList.toggle('over', over);
       fill.classList.toggle('over', over);
@@ -112,13 +134,13 @@ function sessionBar(app, session) {
   /* O intervalo existe apenas para animar o mostrador — como o
      clockPulse do Bunpou Lab. Ele NUNCA encerra a sessão nem toca na
      questão aberta; tudo é recalculado por tempo absoluto, então voltar
-     do background já mostra o overtime certo. */
+     do segundo plano já mostra o tempo certo. */
   if (byTime) {
     const id = setInterval(paint, 1000);
     app.onNextRender(() => clearInterval(id));
   }
 
-  return h('div', { class: 'session-bar' }, rail, label);
+  return h('div', { class: 'sessbar session-bar' }, rail, h('span', { class: 'sess-count' }, label, meta));
 }
 
 /* ------------------------------------------------------------------ */
@@ -126,17 +148,15 @@ function askingBlock(app, session, cur) {
   const box = h('div');
 
   if (cur.isGroupQuestion) {
-    const chips = h('div', { class: 'chipset', style: { justifyContent: 'center', marginTop: '22px' } },
+    box.appendChild(h('div', { class: 'opts group-opts' },
       [1, 2, 3].map(g => h('button', {
-        class: 'btn btn-lg',
-        style: { flex: '1 1 30%' },
+        class: 'btn',
         onclick: () => { session.submit(String(g)); app.render(); }
       }, `Grupo ${g}`))
-    );
-    box.appendChild(chips);
+    ));
   } else {
     const input = h('input', {
-      class: 'answer mincho',
+      class: 'answer tin',
       type: 'text',
       autocomplete: 'off',
       autocapitalize: 'off',
@@ -174,7 +194,7 @@ function askingBlock(app, session, cur) {
     });
     box.appendChild(input);
 
-    const submit = () => {
+    var submit = () => {
       /* O DOM é a fonte autoritativa no instante do envio: durante a
          composição do IME alguns navegadores não emitem `input`, e o
          rascunho pode estar um passo atrás. Sincroniza e envia. */
@@ -184,10 +204,6 @@ function askingBlock(app, session, cur) {
       session.submit(val);
       app.render();
     };
-
-    box.appendChild(h('div', { class: 'q-actions' },
-      h('button', { class: 'btn btn-primary btn-lg btn-block', onclick: submit }, 'Responder')
-    ));
 
     /* Foco automático (§40), sem rolar a página no celular. Depois de um
        render no meio da digitação o cursor volta para o fim do texto —
@@ -202,7 +218,7 @@ function askingBlock(app, session, cur) {
     });
   }
 
-  /* dicas já reveladas */
+  /* dicas já reveladas — no formato de bloco de apoio do Bunpou */
   session.shownHints.forEach((t, i) => {
     box.appendChild(h('div', { class: 'hint' },
       h('b', { text: `Dica ${i + 1}` }),
@@ -210,31 +226,40 @@ function askingBlock(app, session, cur) {
     ));
   });
 
-  const help = h('div', { class: 'q-help' });
+  /* Ações: Responder (primário) + Dica e Não sei (fantasmas), como o
+     Responder / Não sei do Bunpou Lab. */
+  const acts = h('div', { class: 'qactions' });
+  if (!cur.isGroupQuestion) {
+    acts.appendChild(h('button', { class: 'btn btn-primary', onclick: () => submit() }, 'Responder'));
+  }
   const hintsLeft = session.availableHints().length - session.hintsShown;
   if (hintsLeft > 0) {
-    help.appendChild(h('button', {
-      class: 'btn-link',
+    acts.appendChild(h('button', {
+      class: 'btn btn-ghost',
       onclick: () => { session.revealHint(); app.render(); }
     }, session.hintsShown === 0 ? 'Preciso de uma dica' : 'Mais uma dica'));
   }
-  help.appendChild(h('button', {
-    class: 'btn-link',
+  acts.appendChild(h('button', {
+    class: 'btn btn-ghost',
     onclick: () => { session.dontKnow(); app.render(); }
   }, 'Não sei'));
-  box.appendChild(help);
+  box.appendChild(acts);
 
   return box;
 }
 
 /* ------------------------------------------------------------------ */
+/* Bloco de feedback na linguagem do Bunpou: veredito + linhas rotuladas. */
+const fline = (title, ...content) =>
+  h('div', { class: 'fline' }, h('span', { class: 'fl-t', text: title }), ...content);
+
 function feedbackBlock(app, session, res) {
   const box = h('div');
   const ok = res.correct;
-  const fb = h('div', { class: `fb ${ok ? 'ok' : 'bad'}` });
+  const fb = h('div', { class: `fb ${ok ? 'good' : res.dontKnow ? 'idk' : 'bad'}` });
 
-  /* ---- cabeçalho ---- */
-  const head = h('div', { class: 'fb-head' });
+  /* ---- veredito ---- */
+  const head = h('div', { class: 'verdict' });
   head.appendChild(h('span', { text: ok ? '✓ Correto' : '✗ Ainda não' }));
   if (ok && res.hinted) head.appendChild(h('span', { class: 'tag', text: 'com dica' }));
   if (res.dontKnow) head.appendChild(h('span', { class: 'tag', text: 'não sei' }));
@@ -244,30 +269,23 @@ function feedbackBlock(app, session, res) {
      “Sua resposta” mostra o texto EXATAMENTE como foi digitado (sem a
      normalização interna), com espaços preservados. Só ganha furigana se
      ele já está escrito na grafia em kanji que a tela ensina. */
-  fb.appendChild(answerLines(res));
+  answerLines(res).forEach(n => fb.appendChild(n));
 
-  /* ---- acerto: curto, para não quebrar o ritmo (§19) ---- */
   if (ok) {
-    const settings = getState().settings;
-    if (settings.hideGroup && res.form !== 'group') {
-      fb.appendChild(h('p', { class: 'src-line', text: GROUP_LABEL[res.verb.group] }));
-    } else if (res.form !== 'group') {
-      fb.appendChild(h('p', { class: 'src-line', text: GROUP_LABEL[res.verb.group] }));
-    }
+    /* acerto: curto, para não quebrar o ritmo (§19) */
+    if (res.form !== 'group') fb.appendChild(fline('Grupo', h('span', { text: GROUP_LABEL[res.verb.group] })));
   } else {
     /* ---- erro: diagnóstico + caminho completo (§20–§24) ---- */
-    fb.appendChild(h('p', { class: 'tag', text: GROUP_LABEL[res.verb.group], style: { marginTop: '10px' } }));
-
     if (res.diagnosis) {
-      fb.appendChild(h('p', { class: 'fb-diag' },
-        h('span', { class: 'lead' }, jpText(res.diagnosis.message)),
-        res.diagnosis.detail ? h('span', { class: 'det' }, jpText(res.diagnosis.detail)) : null
+      fb.appendChild(fline('Por que esta resposta não atende ao pedido',
+        h('span', { class: 'diag-lead' }, jpText(res.diagnosis.message)),
+        res.diagnosis.detail ? h('span', { class: 'diag-det' }, jpText(res.diagnosis.detail)) : null
       ));
     }
-
-    if (res.explanation) fb.appendChild(explanationBlock(res.explanation));
+    fb.appendChild(fline('Grupo', h('span', { text: GROUP_LABEL[res.verb.group] })));
+    if (res.explanation) explanationLines(res.explanation).forEach(n => fb.appendChild(n));
     else if (res.form === 'group') {
-      fb.appendChild(h('div', { class: 'rule-line', text: groupRuleLine(res.verb) }));
+      fb.appendChild(fline('Regra utilizada', h('span', { text: groupRuleLine(res.verb) })));
       fb.appendChild(h('p', { class: 'src-line', text: 'Básico Rikai · Lição 01' }));
     }
   }
@@ -283,17 +301,15 @@ function feedbackBlock(app, session, res) {
     session.next();
     app.render();
   };
-  box.appendChild(h('div', { class: 'q-actions' },
-    h('button', {
-      class: 'btn btn-primary btn-lg btn-block',
-      onclick: advance
-    }, last ? 'Ver resultado' : 'Próxima')
+  box.appendChild(h('div', { class: 'qactions' },
+    h('button', { class: 'btn btn-primary', onclick: advance }, last ? 'Ver resultado' : 'Próxima')
   ));
 
   /* §40 — depois do feedback, Enter avança. */
   const onKey = e => {
     if (e.key === 'Enter' || e.key === ' ') {
       if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (app.dialog) return;
       e.preventDefault();
       document.removeEventListener('keydown', onKey);
       advance();
@@ -318,84 +334,86 @@ function typedNode(res) {
 }
 
 function answerLines(res) {
-  const dl = h('dl', { class: 'fb-lines' });
-  const row = (label, node, cls) => {
-    dl.appendChild(h('dt', { text: label }));
-    dl.appendChild(h('dd', { class: cls || '' }, node));
-  };
+  const out = [];
+  const row = (label, node, cls) => out.push(fline(label, h('span', { class: `fl-ans ${cls || ''}` }, node)));
   const isGroup = res.form === 'group';
-  const expected = isGroup
+  const expected = () => isGroup
     ? h('span', { text: GROUP_LABEL[res.groupAnswer] })
     : h('span', {}, jpVerb(res.verb.id, res.verb.masu), h('span', { class: 'arrow', text: ' → ' }), jpVerb(res.verb.id, res.explanation.answer));
+  const givenGroup = () => h('span', { text: GROUP_LABEL[Number(String(res.given).replace(/\D/g, ''))] || res.given });
 
   if (res.dontKnow) {
     row('Sua resposta', h('span', { class: 'muted', text: '“Não sei”' }), 'none');
-    row('Resposta correta', expected, 'right');
+    row('Resposta correta', expected(), 'right');
   } else if (res.blank) {
     row('Sua resposta', h('span', { class: 'muted', text: '(em branco)' }), 'none');
-    row('Resposta correta', expected, 'right');
+    row('Resposta correta', expected(), 'right');
   } else if (res.correct) {
-    row('Sua resposta', isGroup ? h('span', { text: GROUP_LABEL[Number(String(res.given).replace(/\D/g, ''))] || res.given }) : typedNode(res), 'right');
+    row('Sua resposta', isGroup ? givenGroup() : typedNode(res), 'right');
     /* grafia diferente, mas aceita: mostra também a forma esperada */
     if (res.variant) {
-      row('Forma esperada', expected, 'right');
-      dl.appendChild(h('dd', { class: 'note', text: 'Grafia diferente, mas aceita.' }));
+      row('Forma esperada', expected(), 'right');
+      out.push(h('p', { class: 'fl-note', text: 'Grafia diferente, mas aceita.' }));
     } else if (!isGroup) {
-      row('Verbo', h('span', {}, jpVerb(res.verb.id, res.verb.masu), h('span', { class: 'arrow', text: ' → ' }), jpVerb(res.verb.id, res.explanation.answer)), 'ctx');
+      row('Verbo', expected(), 'ctx');
     }
   } else {
-    row('Sua resposta', isGroup ? h('span', { text: GROUP_LABEL[Number(String(res.given).replace(/\D/g, ''))] || res.given }) : typedNode(res), 'wrong');
-    row('Resposta correta', expected, 'right');
+    row('Sua resposta', isGroup ? givenGroup() : typedNode(res), 'wrong');
+    row('Resposta correta', expected(), 'right');
   }
-  return dl;
+  return out;
 }
 
-export function explanationBlock(ex) {
-  const box = h('div');
-
+/* Caminho da resposta, em linhas rotuladas do feedback. */
+function explanationLines(ex) {
+  const out = [];
   const steps = h('div', { class: 'steps' });
-  steps.appendChild(h('div', { class: 'cap', text: 'Como chegar' }));
   for (const s of ex.steps) {
     if (s.note) steps.appendChild(h('div', { class: 'step-note' }, jpText(s.note)));
     if (s.value) steps.appendChild(h('div', { class: 'step-val mincho' }, rubyParts(ex.verb.id, s.value) ? jpVerb(ex.verb.id, s.value) : jpText(s.value)));
   }
-  box.appendChild(steps);
-
-  box.appendChild(h('div', { class: 'rule-line' }, 'Regra: ', ...jpText(ex.rule)));
+  out.push(fline('Como chegar', steps));
+  out.push(fline('Regra utilizada', h('span', { class: 'rule-line' }, ...jpText(ex.rule))));
 
   /* Quando a exceção JÁ É a regra do verbo (いきます), repetir a mesma
-     frase em duas caixas só ocupa espaço. */
+     frase em duas linhas só ocupa espaço. */
   if (ex.exception && ex.exception.rule !== ex.rule) {
-    box.appendChild(h('div', { class: 'exc-line' }, 'Atenção: ', ...jpText(ex.exception.rule)));
+    out.push(fline('Atenção', h('span', { class: 'exc-line' }, ...jpText(ex.exception.rule))));
   }
 
   /* §24 — deixar explícita a relação て → た. */
   if (ex.relation) {
-    box.appendChild(h('p', { class: 'rel-line' },
+    out.push(fline('Relação entre formas', h('span', { class: 'rel-line' },
       'Mesma base da forma て: ',
       jpVerb(ex.verb.id, ex.relation.te),
       ' → ',
       jpVerb(ex.verb.id, ex.relation.ta),
       ` （${ex.relation.swap}）`
-    ));
+    )));
   }
   /* Formas derivadas deixam explícita a forma de origem: ない → なかった
      (§23) e た → たり (Lição 16). */
   if (ex.derivedFrom) {
-    box.appendChild(h('p', { class: 'rel-line' },
+    out.push(fline('Forma de origem', h('span', { class: 'rel-line' },
       `Vem da ${FORM_LABEL[ex.derivedFrom.form]}: `,
       jpVerb(ex.verb.id, ex.derivedFrom.value),
       ' → ',
       jpVerb(ex.verb.id, ex.answer),
       ` （${ex.derivedFrom.swap}）`
-    ));
+    )));
   }
 
-  if (ex.note) box.appendChild(h('p', { class: 'rel-line' }, jpText(ex.note)));
+  if (ex.note) out.push(fline('Observação', h('span', { class: 'rel-line' }, jpText(ex.note))));
 
   const src = [ex.source, ...(ex.sourceExtra || [])].join(' · também ');
-  box.appendChild(h('p', { class: 'src-line', text: src }));
+  out.push(h('p', { class: 'src-line', text: src }));
+  return out;
+}
 
+/* Mantido para quem quiser o caminho num contêiner único. */
+export function explanationBlock(ex) {
+  const box = h('div');
+  explanationLines(ex).forEach(n => box.appendChild(n));
   return box;
 }
 

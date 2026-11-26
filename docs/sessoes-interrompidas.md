@@ -16,7 +16,8 @@ Código:
 | **Continuar sessão** | Volta à mesma questão: o texto que estava digitado, as dicas já abertas e, se a correção estava na tela, o mesmo feedback, sem responder de novo. A fila segue na mesma ordem, inclusive os itens errados que voltariam na sessão. |
 | **Descartar** | Pede confirmação. Some só o treino em andamento: as respostas já dadas continuam no progresso. |
 | Começar outro treino com um salvo | **Começar** pede confirmação antes de descartar o salvo. |
-| **Encerrar sessão** ou conclusão normal | O resultado vai para o histórico uma única vez, e o treino deixa de ser "interrompido". |
+| **Encerrar sessão** ou `Esc` | Abrem a confirmação **Sair da sessão?**. **Continuar** volta ao exercício exatamente como estava (texto digitado, feedback, cronômetro, fila); **Sair** encerra. |
+| **Sair** ou conclusão normal | O resultado vai para o histórico uma única vez, e o treino deixa de ser "interrompido". |
 
 O cartão mostra o modo, as questões respondidas (e o total, nas sessões por quantidade), o tempo de sessão e quando foi salvo.
 
@@ -63,15 +64,16 @@ Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 de sessão, dois
 
 - `e2e/cronometro.py` (navegador real, tempos medidos com espera real): 2 min com outra aba na frente, 1 min de navegador minimizado (timers congelados), 30 s com outro aplicativo, 90 s com a aba fechada, retomada, recarga e estabilidade da barra de rolagem.
 
-- `tests/session-resume.test.js` (jsdom, 14 testes):
+- `tests/session-resume.test.js` (jsdom, 15 testes):
   - "fechar a aba" relendo o disco e criando um App novo;
   - texto digitado, feedback, fila de reforço e ordem;
   - cronômetro e pausas;
   - dica aberta;
   - descarte e nova sessão com confirmação;
-  - conclusão e encerramento;
+  - conclusão e encerramento (agora pela confirmação **Sair da sessão?**);
+  - `Esc` abre a confirmação, `Esc` de novo cancela sem perder nada, e Sair encerra;
   - duas abas e formato v1.
-- `e2e/retomada.py` (navegador real com perfil persistente, 18 verificações):
+- `e2e/retomada.py` (navegador real com perfil persistente, 17 verificações):
   - fechar e reabrir o navegador;
   - 3 dias fechado;
   - página oculta sem pausa;

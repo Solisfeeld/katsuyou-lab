@@ -80,7 +80,7 @@ test('sessão é salva ao iniciar; a home mostra o cartão e NÃO retoma sozinha
 test('retomar antes de responder: mesma questão, texto digitado preservado', async () => {
   reset();
   start();
-  answer('のんで'); btn('Próxima').click();
+  answer('のんで'); btn('Continuar').click();
   input().value = 'たべな';
   input().dispatchEvent(new window.Event('input'));
   await new Promise(r => setTimeout(r, 450));        // gravação do rascunho
@@ -110,7 +110,7 @@ test('retomar durante o feedback: o mesmo feedback, sem responder de novo', () =
   assert.equal(pairs(), antes, 'sem dupla contagem');
   assert.equal(store.getPair('nomimasu', 'te').wrong, 1);
   /* avançar segue a fila, e só a próxima resposta muda o progresso */
-  btn('Próxima').click();
+  btn('Continuar').click();
   answer('たべない');
   assert.equal(store.getPair('nomimasu', 'te').wrong, 1, 'o erro não foi contado duas vezes');
   assert.equal(store.getPair('tabemasu', 'nai').right, 1);
@@ -138,7 +138,7 @@ test('ordem da fila e fila de reforço preservadas', () => {
   root.querySelector('[data-resume="continue"]').click();
   assert.deepEqual(app.session.queue.map(i => `${i.verbId}|${i.form}${i.requeued ? '*' : ''}`), fila);
   /* a ordem é seguida: a próxima é a primeira da fila salva */
-  btn('Próxima').click();
+  btn('Continuar').click();
   assert.equal(`${app.session.current.verbId}|${app.session.current.form}`, fila[0].replace('*', ''));
 });
 
@@ -201,7 +201,7 @@ test('dica aberta sobrevive ao fechamento (o acerto continua valendo como “com
 test('descartar pede confirmação e não apaga respostas já registradas', () => {
   reset();
   start();
-  answer('のんで'); btn('Próxima').click();
+  answer('のんで'); btn('Continuar').click();
   const antes = pairs();
   reopen();
   root.querySelector('[data-resume="discard"]').click();
@@ -235,11 +235,11 @@ test('começar outra sessão com uma salva pede confirmação', () => {
 test('concluir normalmente uma sessão retomada: registrada uma vez, sessão salva removida', () => {
   reset();
   start(Q.slice(0, 3));
-  answer('のんで'); btn('Próxima').click();
+  answer('のんで'); btn('Continuar').click();
   reopen();
   root.querySelector('[data-resume="continue"]').click();
-  answer('たべない'); btn('Próxima').click();
-  answer('かいた'); btn('Ver resultado')?.click() ?? btn('Próxima')?.click();
+  answer('たべない'); btn('Continuar').click();
+  answer('かいた'); btn('Ver resultado')?.click() ?? btn('Continuar')?.click();
   assert.equal(app.view, 'sessionEnd');
   assert.equal(store.getState().resume, null, 'não volta como interrompida');
   assert.equal(store.getState().sessions.length, 1, 'registrada uma única vez');
@@ -250,8 +250,15 @@ test('concluir normalmente uma sessão retomada: registrada uma vez, sessão sal
 test('encerrar explicitamente remove a sessão salva e preserva o resultado', () => {
   reset();
   start();
-  answer('のんで'); btn('Próxima').click();
+  answer('のんで'); btn('Continuar').click();
   btn('Encerrar sessão').click();
+  /* pede confirmação, como no Bunpou Lab; Continuar volta à mesma questão */
+  assert.ok(root.querySelector('.overlay.show'), 'confirmação de saída');
+  root.querySelector('[data-dialog="cancel"]').click();
+  assert.equal(app.view, 'practice');
+  assert.ok(store.getState().resume, 'cancelar não encerra');
+  btn('Encerrar sessão').click();
+  root.querySelector('[data-dialog="ok"]').click();
   assert.equal(store.getState().resume, null);
   assert.equal(store.getState().sessions.length, 1);
   assert.equal(store.getPair('nomimasu', 'te').right, 1);
@@ -260,7 +267,7 @@ test('encerrar explicitamente remove a sessão salva e preserva o resultado', ()
 test('duas abas: quem retoma assume; a outra larga a sessão sem gravar', () => {
   reset();
   start();
-  answer('のんで'); btn('Próxima').click();
+  answer('のんで'); btn('Continuar').click();
   const abaA = app;
   /* a aba B retoma a mesma sessão (outro TAB_ID: simulado mudando o dono) */
   const r = store.getState().resume;
@@ -283,4 +290,29 @@ test('formato antigo (v1) de sessão salva continua retomável', () => {
   root.querySelector('[data-resume="continue"]').click();
   assert.equal(app.view, 'practice');
   assert.equal(app.session.answered, 2);
+});
+
+test('Esc abre a confirmação de saída; Esc de novo cancela; Sair encerra', () => {
+  reset();
+  start();
+  input().value = 'のん'; input().dispatchEvent(new window.Event('input'));
+  const esc = () => document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  const key = k => document.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true }));
+  esc();
+  const ov = root.querySelector('.overlay.show');
+  assert.ok(ov, 'Esc abre o diálogo');
+  assert.ok(ov.textContent.includes('Sair da sessão?'));
+  assert.ok(root.querySelector('[data-dialog="ok"]').classList.contains('msel'), 'Sair começa selecionado');
+  key('ArrowLeft');
+  assert.ok(root.querySelector('[data-dialog="cancel"]').classList.contains('msel'), 'setas alternam');
+  key('Enter');
+  assert.equal(root.querySelector('.overlay.show'), null, 'Enter em Continuar fecha');
+  assert.equal(app.view, 'practice');
+  assert.equal(input().value, 'のん', 'o texto digitado continua');
+  esc(); esc();
+  assert.equal(root.querySelector('.overlay.show'), null, 'Esc cancela o diálogo');
+  assert.equal(app.view, 'practice');
+  esc(); key('Enter');
+  assert.equal(app.view, 'sessionEnd', 'Enter em Sair encerra a sessão');
+  assert.equal(store.getState().resume, null);
 });

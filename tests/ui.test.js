@@ -252,7 +252,7 @@ test('§47 a tela final resume e oferece revisar os erros', () => {
   startWith([{ verbId: 'nomimasu', form: 'te' }, { verbId: 'kaimasu', form: 'nai' }]);
   input().value = 'のんで';
   clickText('Responder');
-  clickText('Próxima');
+  clickText('Continuar');
   input().value = 'かあない';
   clickText('Responder');
 
@@ -295,7 +295,7 @@ test('§17 a sessão interrompida reaparece como "Continuar sessão anterior"', 
   startWith([{ verbId: 'nomimasu', form: 'te' }, { verbId: 'tabemasu', form: 'nai' }]);
   input().value = 'のんで';
   clickText('Responder');
-  clickText('Próxima');
+  clickText('Continuar');
   app.go('home');
   assert.ok(text().includes('Continuar sessão anterior'));
   clickText('Continuar sessão');

@@ -48,6 +48,9 @@ como formas-alvo. A justificativa completa está em [AUDITORIA.md](AUDITORIA.md)
 - **Kanji com furigana** nas formas verbais, usando o mesmo conjunto de kanji autorizados do Bunpou Lab. Hiragana continua aceito na resposta.
 - **Sessões interrompidas:** fechar a aba, o navegador ou atualizar a página salva o treino exatamente onde parou: questão, texto digitado, dicas abertas, feedback, fila (com os erros que voltariam) e tempo de sessão. A tela inicial oferece **Continuar sessão anterior** ou **Descartar** (com confirmação), e nada é retomado sozinho. O cronômetro conta o tempo da sessão aberta: trocar de aba ou minimizar o navegador não pausa; só fechar ou atualizar a página interrompe, e esse período não é somado. Ver [docs/sessoes-interrompidas.md](docs/sessoes-interrompidas.md).
 
+- **Tela de exercício centrada no verbo:** o verbo (com furigana), a tradução, a **forma pedida** e o campo de resposta ficam centralizados, um abaixo do outro. Depois de responder, **Continuar** avança.
+- **Sair da sessão:** `Esc` ou **Encerrar sessão** abrem a mesma confirmação, **Sair da sessão?**, com Continuar e Sair. Sair começa selecionado; as setas alternam, `Enter` confirma e `Esc` cancela. Cancelar não perde nada: o texto digitado, a questão, o feedback, o cronômetro, a fila e o progresso ficam como estavam.
+- **Erros recentes:** o cabeçalho fica fixo, só a lista rola, e **Revisar todos** e **Voltar** ficam sempre visíveis no rodapé da página, com 1 ou com 80 erros.
 Detalhes em [docs/repetir-erros-tari-furigana.md](docs/repetir-erros-tari-furigana.md). Sistema visual (compartilhado com o Bunpou Lab): [docs/design-system.md](docs/design-system.md).
 
 ## Rodar localmente

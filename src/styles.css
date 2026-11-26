@@ -29,6 +29,12 @@
   --shadow-lg:0 1px 0 rgba(38,34,30,.03), 0 18px 44px -26px rgba(38,34,30,.40);
   --focus-ring:0 0 0 3px color-mix(in srgb,var(--ai-2) 28%,transparent);
   --ease:cubic-bezier(.2,.7,.2,1);
+  /* Botões e seleção (nov/2026): ação principal em 墨 (sumi), seleção em
+     sakura suave, hover = o próprio fundo escurece. Ver design-system.md. */
+  --btn-pri:#38312F; --btn-pri-ink:#FFFDFA; --btn-pri-hover:#221D1C;
+  --btn-sec:var(--card); --btn-sec-hover:#EEE6DC; --btn-sec-line:var(--line-strong);
+  --btn-danger:#BF4A33; --btn-danger-hover:#9E3824; --btn-danger-ink:#FFFFFF;
+  --sel-bg:#F8E8EC; --sel-line:#C9748A; --sel-ink:#8E3A50;
 
   /* Identidade própria do Katsuyou: selo 活 em 浅葱 (asagi), contra o 藍
      do Bunpou. Uma cor fixa por forma-alvo, que reaparece no chip, na
@@ -56,6 +62,10 @@ html[data-theme="dark"]{
   --shadow-sm:0 1px 2px rgba(0,0,0,.3);
   --shadow:0 1px 0 rgba(0,0,0,.28), 0 10px 28px -16px rgba(0,0,0,.7);
   --shadow-lg:0 1px 0 rgba(0,0,0,.32), 0 22px 52px -26px rgba(0,0,0,.85);
+  --btn-pri:#ECE5DB; --btn-pri-ink:#18171C; --btn-pri-hover:#D2C8BB;
+  --btn-sec:var(--card); --btn-sec-hover:#2C2D37; --btn-sec-line:var(--line-strong);
+  --btn-danger:#EC7E67; --btn-danger-hover:#D2654F; --btn-danger-ink:#18171C;
+  --sel-bg:rgba(234,151,169,.15); --sel-line:#EA97A9; --sel-ink:#F4BFCB;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -590,13 +600,21 @@ html[data-theme="dark"] .session-go{color:#1f3b44;}
   font-size:14.5px;font-weight:700;line-height:1.3;text-align:center;border-radius:10px;}
 .btn-sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:8px;}
 .btn-lg{min-height:52px;padding:12px 22px;font-size:16px;border-radius:12px;}
-.btn:hover{border-color:var(--ai-2);color:var(--ai);}
-.btn-primary{background:var(--ai);border-color:var(--ai);color:var(--on-accent);}
-.btn-primary:hover{background:var(--ai-2);border-color:var(--ai-2);color:var(--on-accent);}
-.btn-shu,.btn-shu:hover{background:var(--shu);border-color:var(--shu);color:#fff;}
-.btn-shu:hover{filter:brightness(1.07);}
-html[data-theme="dark"] .btn-shu,html[data-theme="dark"] .btn-shu:hover{color:#121319;}
+/* hierarquia: principal (墨) · secundário · fantasma · destrutivo. O hover
+   ESCURECE o próprio fundo; nos diálogos, a seleção pelo teclado (.msel) usa
+   exatamente a mesma regra do hover. */
+.btn{background:var(--btn-sec);border-color:var(--btn-sec-line);color:var(--ink);}
+.btn:hover,.modal .btn.msel{background:var(--btn-sec-hover);border-color:var(--btn-sec-line);color:var(--ink);}
+.btn-primary{background:var(--btn-pri);border-color:var(--btn-pri);color:var(--btn-pri-ink);box-shadow:none;}
+.btn-primary:hover,.modal .btn-primary.msel{background:var(--btn-pri-hover);border-color:var(--btn-pri-hover);color:var(--btn-pri-ink);filter:none;}
+.btn-shu{background:var(--btn-danger);border-color:var(--btn-danger);color:var(--btn-danger-ink);}
+.btn-shu:hover,.modal .btn-shu.msel{background:var(--btn-danger-hover);border-color:var(--btn-danger-hover);color:var(--btn-danger-ink);filter:none;}
 .btn-ghost{background:transparent;}
+.btn-ghost:hover,.modal .btn-ghost.msel{background:var(--btn-sec-hover);}
+.btn:disabled:hover{background:var(--btn-sec);border-color:var(--btn-sec-line);}
+.btn-primary:disabled:hover{background:var(--btn-pri);border-color:var(--btn-pri);}
+.btn-shu:disabled:hover{background:var(--btn-danger);border-color:var(--btn-danger);}
+.btn-ghost:disabled:hover{background:transparent;}
 .btn:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--ai-2);}
 .btn:disabled{opacity:.45;cursor:not-allowed;}
 
@@ -659,23 +677,12 @@ html[data-theme="dark"] .btn-shu,html[data-theme="dark"] .btn-shu:hover{color:#1
   .iconbtn:not(.sq),.topbtn{width:36px;padding:0;}
 }
 
-/* Diálogo: o botão selecionado (teclado: abre em "confirmar"; setas/Tab
-   alternam) ACENDE — fundo mais intenso, contraste reforçado e um brilho
-   difuso do próprio botão. Sem anel, sem contorno externo, sem pulsar. O
-   outro botão fica levemente apagado, para não haver dúvida de qual recebe
-   o Enter. */
-.modal .btn,.modal .btn:focus,.modal .btn:focus-visible{outline:none;}
-.modal .btn:focus-visible{box-shadow:none;border-color:var(--line-strong);}
-.modal .btn-shu:focus-visible{border-color:var(--shu);}
-.modal .btn{transition:background .15s var(--ease),color .15s var(--ease),box-shadow .2s var(--ease),filter .15s var(--ease),opacity .15s var(--ease);}
-.modal .btn-shu.msel{background:#DE5638;border-color:#DE5638;color:#fff;
-  box-shadow:0 8px 22px -6px rgba(222,86,56,.72),0 0 16px -2px rgba(222,86,56,.45);}
-html[data-theme="dark"] .modal .btn-shu.msel{background:#FF8E70;border-color:#FF8E70;color:#121319;
-  box-shadow:0 8px 24px -6px rgba(255,142,112,.6),0 0 18px -2px rgba(255,142,112,.4);}
-.modal .btn-ghost.msel{background:color-mix(in srgb,var(--ai) 15%,var(--card));border-color:transparent;color:var(--ai);font-weight:800;
-  box-shadow:0 8px 20px -8px color-mix(in srgb,var(--ai) 55%,transparent),0 0 16px -4px color-mix(in srgb,var(--ai) 38%,transparent);}
-html[data-theme="dark"] .modal .btn-ghost.msel{background:color-mix(in srgb,var(--ai) 24%,var(--card));color:var(--ai-2);}
-.modal-act:has(.msel) .btn:not(.msel){opacity:.72;filter:saturate(.8);}
+/* Diálogo: Continuar = botão secundário (como Exportar progresso), Sair =
+   destrutivo (como Resetar progresso). O selecionado pelo teclado tem a
+   aparência do :hover (regras .msel acima) — sem anel, contorno, brilho ou
+   mudança de tamanho. O mouse sobre um botão também o seleciona, então nunca
+   há dois botões com cara de selecionado. */
+.modal .btn,.modal .btn:focus,.modal .btn:focus-visible{outline:none;box-shadow:none;}
 
 /* ---- tela de exercício: a composição do Bunpou Lab, usada pelos dois ----
    barra de sessão → cabeçalho da etapa → cartão (etiquetas, enunciado,
@@ -704,6 +711,19 @@ html[data-theme="dark"] .modal .btn-ghost.msel{background:color-mix(in srgb,var(
 /* largura e margens do conteúdo, iguais nos dois apps */
 .wrap{max-width:940px;margin:0 auto;padding:0 18px calc(90px + env(safe-area-inset-bottom));}
 @media (max-width:760px){ .qcard{padding:18px 16px;} .wrap{padding:0 14px calc(80px + env(safe-area-inset-bottom));} }
+
+/* seleção: tinta sakura com borda, igual nos dois apps (chips de escolha,
+   Tema, alternativa marcada, unidades e conjuntos dos Ajustes, Ajustes
+   ativo na barra). Hover de controles neutros: o fundo escurece. */
+.choice:hover,.iconbtn:hover,.topbtn:hover,.icon-btn:hover,.pvbtn:hover,.ubtn:hover{background:var(--btn-sec-hover);border-color:var(--btn-sec-line);color:var(--ink);}
+.choice[aria-pressed="true"],.iconbtn.on,.topbtn.on,.chip[aria-pressed="true"],.pvbtn.on,.ubtn.on{
+  background:var(--sel-bg);border-color:var(--sel-line);color:var(--sel-ink);box-shadow:inset 0 0 0 1px var(--sel-line);}
+.opt:not(:disabled):hover{background:var(--btn-sec-hover);border-color:var(--btn-sec-line);}
+/* corrigida, a cor do veredito (.right/.wrong) prevalece sobre a seleção */
+.opt.sel:not(.right):not(.wrong),.opt.sel:not(.right):not(.wrong):not(:disabled):hover{background:var(--sel-bg);border-color:var(--sel-line);box-shadow:inset 3px 0 0 var(--sel-line);}
+.opt.sel:not(.right):not(.wrong) .k{background:var(--sel-line);border-color:var(--sel-line);color:#fff;}
+html[data-theme="dark"] .opt.sel:not(.right):not(.wrong) .k{color:#18171C;}
+.pbar i{background:linear-gradient(90deg,var(--sakura-deep),var(--sakura));}
 
 /* campos */
 .numin{width:76px;min-height:38px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card-2);color:var(--ink);
@@ -772,3 +792,34 @@ html[data-theme="dark"] .modal .btn-ghost.msel{background:color-mix(in srgb,var(
   .practice .qactions:has(.btn-ghost) .btn{flex:1 1 auto;padding-left:12px;padding-right:12px;}
   .practice .qactions:has(.btn-ghost) .btn-primary{flex-basis:100%;}
 }
+
+/* ---- Katsuyou: verbo centralizado como foco da atividade (nov/2026) ----
+   A identidade visual é a mesma do Bunpou (cartão, botões, campos,
+   feedback); a COMPOSIÇÃO é própria da produção de conjugação. */
+.kcenter{text-align:center;padding:4px 0 2px;}
+.kcenter .q-prompt{margin:0;font-family:"Shippori Mincho",Georgia,serif;font-size:clamp(38px,11vw,54px);font-weight:700;
+  line-height:1.45;letter-spacing:.03em;text-align:center;}
+.kcenter .q-prompt rt{font-size:.36em;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:500;color:var(--ink-soft);}
+.kcenter .q-meaning{margin:2px 0 0;text-align:center;font-size:14px;color:var(--ink-faint);}
+.kcenter .q-ask{text-align:center;margin:16px 0 2px;}
+.kcenter .q-ask .lbl{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);font-weight:800;}
+.kcenter .q-ask .val{display:inline-block;margin-top:6px;font-size:19px;font-weight:800;padding:5px 18px;border-radius:999px;
+  background:var(--wash,var(--ai-wash));color:var(--fc,var(--ai));}
+.kcenter .q-ask .val rt{font-size:.5em;}
+.practice .answer.tin{text-align:center;font-size:22px;margin-top:18px;}
+.practice .answer.tin::placeholder{font-size:15px;}
+.practice .qa-ask{justify-content:center;}
+.practice .hint{text-align:left;}
+
+/* ---- Erros recentes: só a lista rola; ações sempre à vista (nov/2026) ---- */
+.wrap.errpage{display:flex;flex-direction:column;max-height:calc(100vh - 57px);max-height:calc(100dvh - 57px);
+  padding-bottom:0;overflow:hidden;}
+.errpage .page-title,.errpage .page-sub{flex:none;}
+.err-scroll{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:0 4px 8px 0;margin-right:-4px;}
+.err-scroll:focus-visible{outline:none;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ai-2) 30%,transparent);border-radius:12px;}
+.err-scroll > h2:first-child{margin-top:4px !important;}
+.err-actions{flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:12px 0 calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--paper);}
+.err-actions .btn-primary{flex:1 1 220px;}
+@media (max-width:420px){ .err-actions .btn{flex:1 1 100%;} }

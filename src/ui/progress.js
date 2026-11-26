@@ -178,12 +178,18 @@ export function renderErrors(app) {
 
   root.appendChild(h('p', { class: 'page-sub', text: `${errors.length} ${errors.length === 1 ? 'registro' : 'registros'}, do mais recente ao mais antigo.` }));
 
+  /* Como um leitor de PDF: título em cima, só a LISTA rola, e as ações
+     (Revisar todos, Voltar) ficam sempre à vista embaixo. */
+  root.classList.add('errpage');
+  const list = h('div', { class: 'err-scroll', tabindex: '0', 'aria-label': 'Lista de erros recentes' });
+  root.appendChild(list);
+
   let lastDay = null;
   errors.forEach(e => {
     const day = dayLabel(e.at);
     if (day !== lastDay) {
       lastDay = day;
-      root.appendChild(h('h2', {
+      list.appendChild(h('h2', {
         style: { fontSize: '12px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', margin: '18px 0 9px' },
         text: day
       }));
@@ -221,7 +227,7 @@ export function renderErrors(app) {
       })
     }, e.form === GROUP_QUIZ ? 'Treinar este verbo' : 'Treinar esta combinação'));
 
-    root.appendChild(item);
+    list.appendChild(item);
   });
 
   const ids = [];
@@ -230,12 +236,14 @@ export function renderErrors(app) {
     const k = `${e.verbId}|${e.form}`;
     if (!seen.has(k)) { seen.add(k); ids.push({ verbId: e.verbId, form: e.form }); }
   });
-  root.appendChild(h('button', {
-    class: 'btn btn-primary btn-block btn-lg',
-    style: { marginTop: '16px' },
-    onclick: () => app.startSession({ mode: 'review', queue: ids.slice(0, 20), limitKind: 'count', length: Math.min(20, ids.length) })
-  }, 'Revisar todos'));
-  root.appendChild(backRow(app));
+  const back = backRow(app).firstChild;          // o mesmo "← Voltar" das outras telas
+  root.appendChild(h('div', { class: 'err-actions' },
+    h('button', {
+      class: 'btn btn-primary',
+      onclick: () => app.startSession({ mode: 'review', queue: ids.slice(0, 20), limitKind: 'count', length: Math.min(20, ids.length) })
+    }, 'Revisar todos'),
+    back
+  ));
 
   return root;
 }

@@ -142,7 +142,7 @@ function resumeCard(app, r) {
   if (!m) return null;
   const meta = [];
   meta.push(m.byTime ? `${m.answered} ${m.answered === 1 ? 'questão respondida' : 'questões respondidas'}`
-                     : `${m.answered} de ${m.total} questões`);
+                     : `${m.answered} de ${m.total} questões · ${Math.max(0, m.total - m.answered)} restantes`);
   if (m.time) meta.push(`${m.time} de sessão${m.byTime && m.minutes ? ` · meta ${m.minutes} min` : ''}`);
   if (m.savedAt) {
     const d = Math.floor((Date.now() - m.savedAt) / 86400000);

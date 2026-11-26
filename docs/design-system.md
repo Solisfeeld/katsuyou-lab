@@ -18,7 +18,11 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
 | `--paper` | `#F7F3ED` | `#131419` | fundo |
 | `--card` / `--card-2` | `#FFFDFA` / `#F7F2EB` | `#1C1D24` / `#23242C` | superfícies |
 | `--ink` / `--ink-soft` / `--ink-faint` | `#26221E` / `#544D46` / `#776E65` | `#EEE9E3` / `#BEB6AD` / `#938B82` | texto |
-| `--ai` / `--ai-2` | `#2D4A70` / `#3B5F90` | `#8FA9D8` / `#A9BEE4` | 藍: ação primária, foco |
+| `--ai` / `--ai-2` | `#2D4A70` / `#3B5F90` | `#8FA9D8` / `#A9BEE4` | 藍: foco, links, etiquetas de forma (não é mais a cor dos botões) |
+| `--btn-pri` / `--btn-pri-hover` / `--btn-pri-ink` | `#38312F` / `#221D1C` / `#FFFDFA` | `#ECE5DB` / `#D2C8BB` / `#18171C` | botão primário em 墨 (sumi) |
+| `--btn-sec` / `--btn-sec-hover` / `--btn-sec-line` | `--card` / `#EEE6DC` / `--line-strong` | `--card` / `#2C2D37` / `--line-strong` | botão secundário (Exportar, Continuar no diálogo…) |
+| `--btn-danger` / `--btn-danger-hover` / `--btn-danger-ink` | `#BF4A33` / `#9E3824` / `#FFFFFF` | `#EC7E67` / `#D2654F` / `#18171C` | ação destrutiva (Resetar, Sair) |
+| `--sel-bg` / `--sel-line` / `--sel-ink` | `#F8E8EC` / `#C9748A` / `#8E3A50` | sakura translúcido / `#EA97A9` / `#F4BFCB` | estado **selecionado** (tema, alternativa marcada, conjuntos, Ajustes ativo) |
 | `--sakura` / `--sakura-deep` | `#D9798D` / `#A9445E` | `#EA97A9` / `#F2B6C3` | acento decorativo, sobretítulo |
 | `--sakura-wash` / `--sakura-soft` | `#FBEEF1` / `#F1CBD4` | translúcidos | pétalas, seleção |
 | `--midori` | `#2F7656` | `#66BC95` | acerto |
@@ -28,7 +32,7 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
 | `--murasaki` | `#6A4A7C` | `#B795CE` | categoria |
 | `--radius-sm/…/xl` | 8 / 12 / 16 / 22 px | | cantos |
 | `--shadow-sm/…/lg` | | | elevação |
-| `--focus-ring` | | | anel de foco dos botões |
+| `--focus-ring` | | | anel de foco por teclado (`:focus-visible`), fora dos diálogos |
 | `--ease` | `cubic-bezier(.2,.7,.2,1)` | | transições curtas (≤ 0,2 s) |
 
 ## Tipografia
@@ -58,6 +62,7 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - `apple-touch-icon.png`: 180 px.
   - As referências levam `?v=3` para não ficarem presas no cache.
   - A versão de 21/11 usava um `data:` URI com `#` sem codificar, o que tornava o SVG inválido; por isso o favicon sumiu.
+- **Indicador de conta e sincronização:** mesmo desenho nos dois apps: pílula de 36 px com ponto de estado e rótulo (Entrar, Sincronizado, Sincronizando, Pendente, Offline, Conflito, Erro, Sessão expirada). A **largura acompanha o rótulo**, sem largura fixa (medido de 59 a 136 px). Só no Bunpou, abaixo de 640 px e com o relógio da sessão na barra, a conta conectada vira só o ponto.
 - **Barra superior:** logotipo e nome à esquerda. À direita ficam, nesta ordem, o relógio (só no Bunpou, durante a sessão), a conta, Ajustes e o tema.
   - Os controles têm a mesma altura nos dois apps (36 px), e a barra tem 56 px.
   - Abaixo de 640 px, Ajustes vira ⚙ (com `aria-label`).
@@ -75,7 +80,15 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - Nada é compartilhado além do link: login, progresso e `localStorage` continuam separados.
 - **Sessão interrompida (`.resume-card`):** cartão com borda sakura no topo de "Praticar", com **Continuar sessão** e **Descartar**.
 - **Componentes compartilhados:** um bloco CSS **idêntico** nos dois apps, entre `COMPONENTES COMPARTILHADOS` e o fim do bloco (verificado byte a byte).
-  - Botões: `.btn` com 42 px, `.btn-sm` com 34 px, `.btn-lg` com 52 px, primário, destrutivo e fantasma.
+  - Botões: `.btn` com 42 px, `.btn-sm` com 34 px, `.btn-lg` com 52 px. Hierarquia única nos dois apps, toda em tokens:
+    - **primário** (`.btn-primary`): fundo 墨 sumi (`--btn-pri`), texto claro. No escuro, fundo claro e texto escuro. Uma ação principal por tela (Responder, Continuar, Iniciar sessão, Revisar todos);
+    - **secundário** (`.btn`): fundo do cartão e borda (`--btn-sec*`);
+    - **fantasma** (`.btn-ghost`): sem fundo (Não sei, Chutei, Dica);
+    - **destrutivo** (`.btn-shu`): 朱 (`--btn-danger*`), só para Resetar, Sair e Descartar;
+    - **selecionado**: sakura suave (`--sel-*`), para escolhas que ficam marcadas (tema, alternativa, conjuntos, unidades);
+    - **desabilitado**: opacidade reduzida, sem hover.
+    - **Hover = o próprio fundo escurece** (no escuro, clareia menos), sem brilho, sombra colorida nem mudança de tamanho.
+    - As cores de acerto e erro (verde e 朱 no feedback), os logotipos e os favicons não mudaram.
   - Linha de opção (`.optrow`) e cabeçalho de opção (`.set-head`).
   - Interruptor com rótulo de estado (`.tgl`): o mesmo para "Ligado/Desligado", "Visível/Oculto" e fontes "Ligada/Desligada".
   - Escolha única de tamanho igual (`.choice-group`): Tema, com Automático, Claro e Escuro e ícones SVG alinhados à esquerda. Lado a lado no desktop, empilhada no celular.
@@ -83,18 +96,26 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - Campos numéricos (`.numin`).
   - Diálogo de confirmação (`.overlay`/`.modal`/`.modal-act`), com ações empilhadas abaixo de 420 px. O Katsuyou passou a usar o mesmo diálogo do Bunpou, em vez do `confirm()` do navegador.
   - **Teclado, igual nos dois:** o diálogo abre com a ação (Sair, Descartar…) selecionada; setas e Tab alternam; Enter confirma o **selecionado**; Esc cancela; os atalhos da tela por baixo ficam bloqueados.
-  - **Botão selecionado ACENDE, sem anel nem contorno:** fundo mais intenso (Sair: `#BF4A33 → #DE5638`; no escuro, `#FF8E70`), texto reforçado e um brilho difuso do próprio botão (só sombras com desfoque e espalhamento negativo). Continuar/Cancelar selecionado ganha fundo tingido de 藍, texto em negrito e o mesmo brilho, sem borda colorida. O outro botão fica com opacidade 0,72, para não haver dúvida de qual recebe o Enter. Nenhum `outline` é desenhado.
+  - **Mesmos botões da seção Dados dos Ajustes:** Continuar é **secundário** (como Exportar e Importar progresso) e Sair é **destrutivo** (como Resetar progresso).
+  - **Selecionado pelo teclado = hover do mouse.** A classe `.msel` reutiliza exatamente as regras de `:hover` (`.btn:hover,.modal .btn.msel{…}`): o fundo escurece (Sair `#BF4A33 → #9E3824`; Continuar `card → #EEE6DC`; no escuro `#EC7E67 → #D2654F` e `card → #2C2D37`).
+  - Sem contorno, anel de foco, brilho, sombra luminosa, borda dupla ou mudança de tamanho (`outline:none; box-shadow:none` medidos nos dois apps). Os dois botões ficam com opacidade 1.
+  - Passar o mouse sobre um botão também o torna o selecionado, então mouse e teclado nunca mostram dois botões "acesos".
 - **Tela de exercício (mesma composição nos dois; o Bunpou é a referência):**
   - Ordem: barra da sessão (`.sessbar`/`.pbar`), cabeçalho (`.stagehead`), cartão (`.qcard`) e "Encerrar sessão" centralizado abaixo do cartão (`.foot`).
   - No cartão: etiquetas (`.qtop`/`.qtags`), enunciado (`.qprompt`), resposta, ações (`.qactions`: primário + fantasmas) e feedback (`.fb` com `.verdict` e linhas rotuladas `.fline`/`.fl-t`).
   - Esses estilos estão no bloco compartilhado, com os valores do Bunpou.
-  - **Bunpou:** alternativas, tesoura, Takoboto acima do cartão à direita, ChatGPT, tags, Chutei e Continuar.
-  - **Katsuyou:** a forma pedida e o grupo como etiquetas; "Escreva a Forma て de:"; o verbo em destaque proporcional (34 px; 30 px no celular), não mais gigante e centralizado; o campo `.tin` do Bunpou; Responder (primário) com Dica e Não sei (fantasmas); feedback em linhas rotuladas ("Sua resposta", "Resposta correta", "Como chegar", "Regra utilizada"…).
+  - O botão de avançar se chama **Continuar** nos dois apps ("Ver resultado" na última questão).
+  - **Bunpou:**
+    - alternativas com a **tesoura à esquerda**, antes da letra (`[✂][A][texto]`), como no Qconcursos. É um controle independente: clicar nela não marca a alternativa. A alternativa eliminada fica esmaecida, e o ícone, em 朱. Depois da correção, um espaço do mesmo tamanho ocupa o lugar da tesoura, para nada mudar de posição;
+    - **Takoboto no canto inferior direito do cartão**, na mesma linha de Responder/Não sei (ou Continuar/Chutei). A busca abre para a esquerda: `[Buscar palavra][GO][ícone]`, com o ícone parado. Não há modal nem sobreposição, os botões de resposta não se movem e o cartão não muda de altura. Abaixo de 600 px o ícone fica numa segunda linha reservada, à direita. `Enter` ou GO abrem `takoboto.jp/?q=…&lang=por` em nova aba; `Esc` fecha primeiro a busca e só o `Esc` seguinte abre a saída. A busca fecha ao avançar;
+    - ChatGPT, tags e Chutei.
+  - **Katsuyou:** composição **centralizada**: o grupo como etiqueta no topo; o verbo grande em Mincho com furigana (38 px no celular, até 54 px), a tradução logo abaixo, o rótulo **Forma pedida** com a forma numa pílula, e o campo `.tin` centralizado. Responder (primário) com Dica e Não sei (fantasmas) centralizados. O feedback continua em linhas rotuladas ("Sua resposta", "Resposta correta", "Como chegar", "Regra utilizada"…). A identidade visual é a mesma do Bunpou, mas as telas não são cópias: cada uma serve ao seu tipo de exercício.
+  - **Erros recentes (Katsuyou):** cabeçalho fixo, só a lista rola (`.err-scroll`), e **Revisar todos** e **Voltar** ficam sempre visíveis no rodapé (`.err-actions`).
 - **Feedback (`.fb`):** borda esquerda de 4 px na cor do veredito, fundo levemente tingido e texto em tinta.
 
 ## Acessibilidade
 
-- Foco visível em todos os controles (`:focus-visible` + `--focus-ring`). Nos diálogos, o foco é indicado pelo estado "aceso" descrito acima, não por um anel.
+- Foco visível em todos os controles (`:focus-visible` + `--focus-ring`). Nos diálogos, o selecionado tem a aparência de hover descrita acima, sem anel.
 - Todas as decorações SVG têm `aria-hidden="true"` e `focusable="false"`.
 - `prefers-reduced-motion: reduce` zera transições e animações.
 - Alvo de toque ≥ 36 px na topbar e ≥ 44 px nas ações principais.
@@ -108,7 +129,14 @@ Verificado com capturas reais (Chromium/Brave headless) em 320, 360, 390, 430, 7
 |---|---|
 | ≤ 760 px | o ramo sai; os cartões de modo ficam em coluna |
 | ≤ 640 px | Ajustes vira ⚙ na barra; o subtítulo do nome some |
+| ≤ 600 px (Bunpou, cartão da questão) | o Takoboto passa para uma segunda linha reservada, à direita, abaixo das ações |
 | ≤ 560 px | os números do acompanhamento viram grade de 3 colunas; Tema e Dados empilham; cartões de configuração com 16 px de margem interna |
 | ≤ 430 px (Bunpou, durante a sessão) | o nome cede espaço ao relógio; o selo fica |
 
 Barra superior verificada também por medição automática em 320, 390, 768, 1280 e 1440 px nos dois temas: nenhum controle cortado, nenhuma rolagem horizontal, logotipo de 34 × 34 px e nenhum elemento de navegação entre laboratórios. Telas de Ajustes verificadas em 320, 360, 390, 768 e 1280 px: as três opções de tema e os três botões de Dados com largura e altura idênticas em cada largura.
+
+Rodada de 26/11/2026, medida em 320, 360, 390, 768, 1024, 1280 e 1440 px, claro e escuro, nos dois apps:
+- sem rolagem horizontal;
+- Takoboto dentro do cartão, na linha das ações, com o ícone e Responder parados ao abrir e a altura do cartão inalterada;
+- verbo do Katsuyou, campo e cartão no mesmo eixo central;
+- diálogos sem sombra nem contorno, com a mesma largura nos dois estados.

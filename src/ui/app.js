@@ -75,7 +75,14 @@ export class App {
       }, true);
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && this.dialog) { e.preventDefault(); this.closeDialog(); return; }
-        if (e.key === 'Escape' && this.acctOpen) { this.acctOpen = false; this.render(); }
+        if (e.key === 'Escape' && this.acctOpen) { this.acctOpen = false; this.render(); return; }
+        /* Esc na tela de exercício = o mesmo "Encerrar sessão": pergunta antes.
+           Durante a composição do IME, Esc é do IME e não chega aqui. */
+        if (e.key === 'Escape' && !e.defaultPrevented && !e.repeat && !e.isComposing && e.keyCode !== 229 &&
+            this.view === 'practice' && this.session && this.session.phase !== 'done') {
+          e.preventDefault();
+          this.confirmQuit(this.session);
+        }
       });
     } catch { /* ambiente sem document: nada a fazer */ }
   }
@@ -266,6 +273,21 @@ export class App {
     if (this.view !== 'practice') this.render();
   }
 
+  /* Saída intencional da sessão (botão Encerrar sessão, Esc ou a marca):
+     o mesmo diálogo do Bunpou Lab — Sair selecionado, setas alternam, Enter
+     confirma, Esc cancela. Continuar volta exatamente à mesma atividade. */
+  confirmQuit(session) {
+    if (!session || this.dialog) return;
+    this.askConfirm({
+      title: 'Sair da sessão?',
+      body: 'O que você respondeu até agora já está salvo. Ao sair, a sessão é encerrada e você vê o resultado; as questões restantes não serão feitas.',
+      ok: 'Sair',
+      cancel: 'Continuar',
+      danger: true,
+      onOk: () => this.endSession(session)
+    });
+  }
+
   /* Outra aba assumiu (ou encerrou) a sessão aberta aqui: larga sem gravar. */
   detachSession() {
     this.session = null;
@@ -294,10 +316,15 @@ export class App {
     const sel = this.dialogSel || 'ok';
     const okBtn = h('button', {
       class: `btn ${d.danger ? 'btn-shu' : 'btn-primary'}${sel === 'ok' ? ' msel' : ''}`, 'data-dialog': 'ok',
+      onmouseenter: () => { this.dialogSel = 'ok'; this.paintDialogSel(); },
       onclick: () => this.closeDialog(true)
     }, d.ok);
+    /* Continuar/Cancelar = botão secundário (como Exportar progresso). O
+       mouse sobre um botão também o seleciona: nunca dois com cara de
+       selecionado. */
     const cancelBtn = h('button', {
-      class: `btn btn-ghost${sel === 'cancel' ? ' msel' : ''}`, 'data-dialog': 'cancel',
+      class: `btn${sel === 'cancel' ? ' msel' : ''}`, 'data-dialog': 'cancel',
+      onmouseenter: () => { this.dialogSel = 'cancel'; this.paintDialogSel(); },
       onclick: () => this.closeDialog()
     }, d.cancel);
     const node = h('div', {
@@ -390,8 +417,9 @@ export class App {
           class: 'brand',
           'aria-label': 'Início',
           onclick: () => {
-            if (inSession && this.session && this.session.answered > 0) {
-              this.endSession(this.session);
+            /* durante a sessão a marca não sai sem confirmação (como no Bunpou) */
+            if (inSession && this.session && this.session.phase !== 'done') {
+              this.confirmQuit(this.session);
             } else this.go('home');
           }
         },

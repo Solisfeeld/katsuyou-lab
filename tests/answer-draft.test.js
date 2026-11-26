@@ -210,7 +210,7 @@ test('G. a próxima questão começa com o campo vazio', () => {
   abrirQuestao();
   digitar('のんで');
   btn('Responder').click();
-  btn('Próxima').click();
+  btn('Continuar').click();
 
   assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'たべます');
   assert.equal(app.session.answerDraft, '', 'o rascunho foi limpo');
@@ -228,7 +228,7 @@ test('H. "Não sei" não envia o texto parcial nem o carrega para a próxima', (
   assert.notEqual(r.given, 'のん');
   assert.ok(text().includes('のんで'), 'o feedback mostra a resposta certa');
 
-  btn('Próxima').click();
+  btn('Continuar').click();
   assert.equal(input().value, '', 'o rascunho não vazou para a questão seguinte');
 });
 

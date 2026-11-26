@@ -46,25 +46,29 @@ export function renderPractice(app, session) {
 
   const card = h('div', { class: 'qcard' });
 
-  /* ---- etiquetas (como as do Bunpou): forma pedida, grupo, reforço ---- */
+  /* ---- etiquetas: grupo e reforço (a forma pedida fica no centro) ---- */
   const tags = h('div', { class: 'qtags' });
-  if (cur.isGroupQuestion) tags.appendChild(h('span', { class: 'chip', text: 'Qual é o grupo?' }));
-  else tags.appendChild(h('span', { class: 'chip chip-form', style: formVars(cur.form) }, jpText(FORM_LABEL[cur.form])));
   /* §14 — o grupo pode ser escondido durante o exercício. */
   if (!cur.isGroupQuestion && !settings.hideGroup) {
     tags.appendChild(h('span', { class: 'chip q-group', text: GROUP_LABEL[cur.verb.group] }));
   }
   if (cur.requeued) tags.appendChild(h('span', { class: 'chip chip-reforco', text: 'reforço' }));
-  card.appendChild(h('div', { class: 'qtop' }, tags));
+  if (tags.children.length) card.appendChild(h('div', { class: 'qtop' }, tags));
 
-  /* ---- enunciado: o pedido em texto e o verbo em destaque proporcional ---- */
-  card.appendChild(h('div', { class: 'qprompt' },
-    cur.isGroupQuestion ? 'A qual grupo pertence este verbo?'
-      : h('span', {}, 'Escreva a ', h('b', {}, jpText(FORM_LABEL[cur.form])), ' de:')
-  ));
-  card.appendChild(h('div', { class: 'kverb' },
+  /* ---- centro: o verbo é o foco da atividade (composição própria do
+     Katsuyou — produção de conjugação, não escolha de alternativas) ---- */
+  const ask = h('div', { class: 'q-ask' });
+  if (cur.isGroupQuestion) {
+    ask.appendChild(h('div', { class: 'lbl', text: 'Pergunta' }));
+    ask.appendChild(h('div', { class: 'val', style: { '--wash': 'var(--card-2)', '--fc': 'var(--ink)' }, text: 'Qual é o grupo?' }));
+  } else {
+    ask.appendChild(h('div', { class: 'lbl', text: 'Forma pedida' }));
+    ask.appendChild(h('div', { class: 'val', style: formVars(cur.form) }, jpText(FORM_LABEL[cur.form])));
+  }
+  card.appendChild(h('div', { class: 'kcenter' },
     h('p', { class: 'q-prompt mincho' }, jpVerb(cur.verbId, cur.prompt)),
-    h('p', { class: 'q-meaning', text: cur.meaning })
+    h('p', { class: 'q-meaning', text: cur.meaning }),
+    ask
   ));
 
   /* ---- resposta ---- */
@@ -80,7 +84,7 @@ export function renderPractice(app, session) {
   body.appendChild(h('div', { class: 'foot' },
     h('button', {
       class: 'btn btn-ghost',
-      onclick: () => app.endSession(session)
+      onclick: () => app.confirmQuit(session)
     }, 'Encerrar sessão')
   ));
 
@@ -228,7 +232,7 @@ function askingBlock(app, session, cur) {
 
   /* Ações: Responder (primário) + Dica e Não sei (fantasmas), como o
      Responder / Não sei do Bunpou Lab. */
-  const acts = h('div', { class: 'qactions' });
+  const acts = h('div', { class: 'qactions qa-ask' });
   if (!cur.isGroupQuestion) {
     acts.appendChild(h('button', { class: 'btn btn-primary', onclick: () => submit() }, 'Responder'));
   }
@@ -302,7 +306,7 @@ function feedbackBlock(app, session, res) {
     app.render();
   };
   box.appendChild(h('div', { class: 'qactions' },
-    h('button', { class: 'btn btn-primary', onclick: advance }, last ? 'Ver resultado' : 'Próxima')
+    h('button', { class: 'btn btn-primary', onclick: advance }, last ? 'Ver resultado' : 'Continuar')
   ));
 
   /* §40 — depois do feedback, Enter avança. */

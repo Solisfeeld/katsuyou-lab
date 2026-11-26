@@ -184,7 +184,7 @@ test('Ajustes aberto durante a sessão volta para a MESMA sessão', () => {
   /* Responde uma para a sessão ter estado. */
   root.querySelector('input.answer').value = 'のんで';
   btnByText('Responder').click();
-  btnByText('Próxima').click();
+  btnByText('Continuar').click();
   assert.equal(root.querySelector('.q-prompt [data-kana]').dataset.kana, 'たべます');
 
   top('settings').click();

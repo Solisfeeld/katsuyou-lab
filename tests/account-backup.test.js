@@ -46,6 +46,7 @@ function reset() {
   store.resetAll();
   app.backupNotice = null;
   app.pendingImport = null;
+  app.dialog = null;
   delete window.KatsuyouSync;
 }
 
@@ -199,34 +200,105 @@ test('falha de rede não bloqueia o estudo', () => {
    4. Conflito local × nuvem
    =================================================================== */
 
-test('conflito mostra a explicação e as duas escolhas', () => {
+/* A resolução é a MESMA janela do Bunpou Lab (.modal-choice), aberta por
+   "Resolver conflito" — nos Ajustes e no popover da conta. */
+const modal = () => root.querySelector('.overlay.show .modal-choice');
+const esc = () => document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+test('conflito: Ajustes informa e "Resolver conflito" abre a janela sobre a página', () => {
   reset();
-  stubSync({ status: 'conflict', user: GOOGLE_USER });
+  stubSync({ status: 'conflict', user: GOOGLE_USER, conflictRevision: 1374 });
   app.go('settings');
-  const t = text();
-  assert.ok(t.includes('Há progresso diferente neste dispositivo e na sua conta.'));
-  assert.ok(btn('Usar progresso deste dispositivo'));
-  assert.ok(btn('Usar progresso da nuvem'));
-  assert.ok(t.includes('será enviado para a sua conta'));
-  assert.ok(t.includes('substituirá o deste dispositivo'));
+  assert.ok(text().includes('Há progresso diferente neste dispositivo e na sua conta.'));
+  assert.equal(modal(), null, 'a janela só abre pela ação do usuário');
+  assert.equal(btn('Usar progresso deste dispositivo'), undefined, 'as escolhas não ficam mais soltas nos Ajustes');
+  click('Resolver conflito');
+  const m = modal();
+  assert.ok(m, 'a janela de resolução abriu');
+  assert.equal(app.view, 'settings', 'não houve navegação');
+  assert.equal(m.querySelector('h3').textContent, 'Há mudanças mais recentes em outro dispositivo');
+  assert.equal(m.querySelector('p').textContent,
+    'Este dispositivo tem alterações que não foram enviadas, e a nuvem já mudou (revisão 1374). Nada foi descartado — escolha qual versão manter.');
+  const main = [...m.querySelectorAll('.mc-main button')].map(b => b.textContent);
+  const foot = [...m.querySelectorAll('.mc-foot button')].map(b => b.textContent);
+  assert.deepEqual(main, ['Manter deste dispositivo', 'Usar versão da nuvem']);
+  assert.deepEqual(foot, ['Cancelar']);
+  assert.ok(btn('Usar versão da nuvem').classList.contains('btn-primary'));
 });
 
-test('"Usar progresso deste dispositivo" chama keepLocal()', () => {
+test('a revisão vem dos dados: sem revisão conhecida, o texto não inventa número', () => {
+  reset();
+  stubSync({ status: 'conflict', user: GOOGLE_USER, conflictRevision: null });
+  app.go('settings');
+  click('Resolver conflito');
+  assert.ok(!modal().querySelector('p').textContent.includes('revisão'));
+  reset();
+  stubSync({ status: 'conflict', user: GOOGLE_USER, conflictRevision: 87 });
+  app.go('settings');
+  click('Resolver conflito');
+  assert.ok(modal().querySelector('p').textContent.includes('(revisão 87)'));
+});
+
+test('"Usar versão da nuvem" chama keepRemote() e fecha a janela', () => {
   reset();
   const sync = stubSync({ status: 'conflict', user: GOOGLE_USER });
   app.go('settings');
-  click('Usar progresso deste dispositivo');
-  assert.equal(sync.calls.keepLocal, 1);
-  assert.equal(sync.calls.keepRemote, 0);
-});
-
-test('"Usar progresso da nuvem" chama keepRemote()', () => {
-  reset();
-  const sync = stubSync({ status: 'conflict', user: GOOGLE_USER });
-  app.go('settings');
-  click('Usar progresso da nuvem');
+  click('Resolver conflito');
+  click('Usar versão da nuvem');
   assert.equal(sync.calls.keepRemote, 1);
   assert.equal(sync.calls.keepLocal, 0);
+  assert.equal(modal(), null);
+});
+
+test('"Manter deste dispositivo" pede confirmação antes de substituir a nuvem', () => {
+  reset();
+  const sync = stubSync({ status: 'conflict', user: GOOGLE_USER });
+  app.go('settings');
+  click('Resolver conflito');
+  click('Manter deste dispositivo');
+  assert.equal(sync.calls.keepLocal, 0, 'nada é substituído sem confirmar');
+  assert.equal(modal().querySelector('h3').textContent, 'Substituir a versão da nuvem?');
+  assert.deepEqual([...modal().querySelectorAll('.mc-main button')].map(b => b.textContent), ['Cancelar', 'Substituir']);
+  assert.ok(btn('Substituir').classList.contains('btn-shu'));
+  /* cancelar a confirmação não resolve nada */
+  click('Cancelar');
+  assert.equal(modal(), null);
+  assert.equal(sync.calls.keepLocal, 0);
+  /* e dá para reabrir e confirmar */
+  click('Resolver conflito');
+  click('Manter deste dispositivo');
+  click('Substituir');
+  assert.equal(sync.calls.keepLocal, 1);
+  assert.equal(sync.calls.keepRemote, 0);
+  assert.equal(modal(), null);
+});
+
+test('Cancelar e Esc fecham sem resolver nem descartar; a janela reabre', () => {
+  reset();
+  const sync = stubSync({ status: 'conflict', user: GOOGLE_USER });
+  app.go('settings');
+  click('Resolver conflito');
+  click('Cancelar');
+  assert.equal(modal(), null);
+  click('Resolver conflito');
+  assert.ok(modal(), 'reabriu depois de cancelar');
+  esc();
+  assert.equal(modal(), null, 'Esc = Cancelar');
+  click('Resolver conflito');
+  assert.ok(modal(), 'reabriu depois do Esc');
+  click('Manter deste dispositivo');
+  esc();
+  assert.equal(modal(), null, 'Esc também cancela a confirmação');
+  assert.equal(sync.calls.keepLocal, 0);
+  assert.equal(sync.calls.keepRemote, 0);
+  assert.equal(sync.status, 'conflict', 'o conflito continua pendente');
+});
+
+test('a janela só abre com conflito pendente', () => {
+  reset();
+  stubSync({ status: 'synced', user: GOOGLE_USER });
+  app.openConflict();
+  assert.equal(modal(), null);
 });
 
 test('conflito não é resolvido sozinho', () => {

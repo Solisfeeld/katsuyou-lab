@@ -683,6 +683,28 @@ html[data-theme="dark"] .session-go{color:#1f3b44;}
    mudança de tamanho. O mouse sobre um botão também o seleciona, então nunca
    há dois botões com cara de selecionado. */
 .modal .btn,.modal .btn:focus,.modal .btn:focus-visible{outline:none;box-shadow:none;}
+/* janela de escolha (sincronização): Bunpou → choiceModal em src/auth-sync.js;
+   Katsuyou → askChoice em src/ui/app.js. Mesma marcação nos dois. Título
+   forte, texto confortável e as escolhas lado a lado, com a mesma largura:
+   secundária à esquerda, principal à direita. "Cancelar" fica sozinho
+   abaixo, à direita. No celular as escolhas empilham com a principal em
+   cima, e Cancelar vira fantasma de largura total, por último. */
+.modal.modal-choice{max-width:480px;padding:28px 28px 24px;}
+.modal-choice h3{font-size:23px;line-height:1.3;margin:0 0 10px;color:var(--ink);font-weight:700;letter-spacing:normal;}
+.modal-choice p{font-size:14.5px;line-height:1.7;margin:0 0 24px;}
+.mc-main{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:12px;}
+.mc-main .btn,.mc-foot .btn{min-height:48px;padding:10px 16px;font-size:14.5px;border-radius:12px;white-space:normal;line-height:1.3;}
+.mc-foot{display:flex;justify-content:flex-end;margin-top:16px;}
+.mc-foot .btn{min-width:112px;}
+@media (max-width:480px){
+  .modal.modal-choice{padding:24px 20px 20px;}
+  .modal-choice h3{font-size:21px;}
+  .mc-main{grid-auto-flow:row;}
+  .mc-main .mc-pri{order:-1;}
+  .mc-foot{margin-top:8px;}
+  .mc-foot .btn{width:100%;background:transparent;border-color:transparent;color:var(--ink-soft);}
+  .mc-foot .btn:hover{background:var(--btn-sec-hover);border-color:transparent;color:var(--ink);}
+}
 
 /* ---- tela de exercício: a composição do Bunpou Lab, usada pelos dois ----
    barra de sessão → cabeçalho da etapa → cartão (etiquetas, enunciado,
@@ -825,23 +847,6 @@ html[data-theme="dark"] .opt.sel:not(.right):not(.wrong) .k{color:#18171C;}
 @media (max-width:420px){ .err-actions .btn{flex:1 1 100%;} }
 
 /* ---- conflito de sincronização (Ajustes › Conta) ----
-   Mesmo desenho do diálogo de conflito do Bunpou Lab (.modal-choice):
-   superfície do cartão com borda forte, cantos xl e o fio sakura no topo;
-   título em Mincho, texto confortável; as duas escolhas lado a lado, com a
-   mesma largura e 48 px de altura; a principal (nuvem) à direita. Abaixo de
-   480 px as escolhas empilham, com a principal em cima. */
-.conflict-panel{position:relative;overflow:hidden;margin-top:16px;padding:26px 26px 22px;
-  background:var(--card);border:1px solid var(--line-strong);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);}
-.conflict-panel::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--sakura),transparent 70%);}
-.conflict-panel h3{font-family:"Shippori Mincho",Georgia,serif;font-size:23px;line-height:1.3;font-weight:700;color:var(--ink);margin:0 0 10px;}
-.conflict-panel .cp-lead{font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 22px;}
-.cp-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
-.cp-opt{display:flex;flex-direction:column;min-width:0;}
-.cp-opt .btn{width:100%;min-height:48px;padding:10px 16px;font-size:14.5px;border-radius:12px;white-space:normal;line-height:1.3;}
-.cp-note{margin:8px 2px 0;font-size:12.5px;line-height:1.55;color:var(--ink-faint);}
-@media (max-width:480px){
-  .conflict-panel{padding:22px 18px 18px;}
-  .conflict-panel h3{font-size:21px;}
-  .cp-choices{grid-template-columns:1fr;gap:14px;}
-  .cp-pri{order:-1;}
-}
+   Só informa; a resolução é a janela de escolha (.modal-choice). */
+.conflict-note{margin:14px 0 0;font-size:13.4px;line-height:1.6;color:var(--ink-soft);}
+.conflict-note b{color:var(--ink);}

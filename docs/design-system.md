@@ -95,7 +95,23 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - Trio de ações de tamanho idêntico (`.btn-trio`): Exportar, Importar e Resetar progresso. Empilhado no celular; Resetar mantém a cor de alerta e a confirmação.
   - Campos numéricos (`.numin`).
   - Diálogo de confirmação (`.overlay`/`.modal`/`.modal-act`), com ações empilhadas abaixo de 420 px. O Katsuyou passou a usar o mesmo diálogo do Bunpou, em vez do `confirm()` do navegador.
-  - **Teclado, igual nos dois:** o diálogo abre com a ação (Sair, Descartar…) selecionada; setas e Tab alternam; Enter confirma o **selecionado**; Esc cancela; os atalhos da tela por baixo ficam bloqueados.
+  - **Janela de escolha da sincronização (os dois apps):** mesma marcação (`.modal.modal-choice`, `.mc-main`, `.mc-foot`), mesmo CSS (no bloco compartilhado), mesmos textos e mesmo comportamento.
+    - **Bunpou:** `choiceModal` em `src/auth-sync.js`. Três janelas: conflito entre dispositivo e nuvem, confirmação de substituir a nuvem e importação do perfil sem login.
+    - **Katsuyou:** `askChoice`/`openConflict` em `src/ui/app.js`, sobre as funções existentes `keepLocal` e `keepRemote` de `src/auth-sync.js`. Duas janelas: conflito e confirmação de substituir a nuvem. A importação do perfil sem login não existe no Katsuyou.
+    - **Conflito, nos dois:**
+      - a janela "Há mudanças mais recentes em outro dispositivo" abre sozinha quando o conflito surge, com a revisão real da nuvem no texto (sem número, se a revisão não for conhecida);
+      - **Resolver conflito**, no controle da conta e em Ajustes › Conta, a reabre sobre a tela atual, sem navegar, enquanto o conflito estiver pendente;
+      - "Manter deste dispositivo" passa pela confirmação "Substituir a versão da nuvem?";
+      - "Usar versão da nuvem" adota a nuvem;
+      - Cancelar e `Esc` fecham sem resolver nem descartar nada.
+    - O fundo é o mesmo `.overlay` dos outros diálogos (escurecido com desfoque de 3 px). Não há animação de entrada, nos dois apps.
+    - Com a janela aberta, o relógio da sessão pausa (Bunpou: `.overlay.show`; Katsuyou: `this.dialog`).
+    - Título forte em Mincho (23 px, espaçamento entre letras normal) e texto de 14,5 px.
+    - As escolhas ficam lado a lado, com a mesma largura: secundária à esquerda e principal (primária ou destrutiva) à direita.
+    - **Cancelar** fica sozinho abaixo, à direita.
+    - Abaixo de 480 px as escolhas empilham com a principal em cima, e Cancelar vira um botão fantasma de largura total, por último.
+    - `Esc` equivale a clicar em Cancelar. Setas e Enter não alternam a seleção aqui; isso é só do diálogo de confirmação abaixo.
+  - **Diálogo de confirmação, teclado igual nos dois:** o diálogo abre com a ação (Sair, Descartar…) selecionada; setas e Tab alternam; Enter confirma o **selecionado**; Esc cancela; os atalhos da tela por baixo ficam bloqueados.
   - **Mesmos botões da seção Dados dos Ajustes:** Continuar é **secundário** (como Exportar e Importar progresso) e Sair é **destrutivo** (como Resetar progresso).
   - **Selecionado pelo teclado = hover do mouse.** A classe `.msel` reutiliza exatamente as regras de `:hover` (`.btn:hover,.modal .btn.msel{…}`): o fundo escurece (Sair `#BF4A33 → #9E3824`; Continuar `card → #EEE6DC`; no escuro `#EC7E67 → #D2654F` e `card → #2C2D37`).
   - Sem contorno, anel de foco, brilho, sombra luminosa, borda dupla ou mudança de tamanho (`outline:none; box-shadow:none` medidos nos dois apps). Os dois botões ficam com opacidade 1.
@@ -107,7 +123,13 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - O botão de avançar se chama **Continuar** nos dois apps ("Ver resultado" na última questão).
   - **Bunpou:**
     - alternativas com a **tesoura à esquerda**, antes da letra (`[✂][A][texto]`), como no Qconcursos. É um controle independente: clicar nela não marca a alternativa. A alternativa eliminada fica esmaecida, e o ícone, em 朱. Depois da correção, um espaço do mesmo tamanho ocupa o lugar da tesoura, para nada mudar de posição;
-    - **Takoboto no canto inferior direito do cartão**, na mesma linha de Responder/Não sei (ou Continuar/Chutei). A busca abre para a esquerda: `[Buscar palavra][GO][ícone]`, com o ícone parado. Não há modal nem sobreposição, os botões de resposta não se movem e o cartão não muda de altura. Abaixo de 600 px o ícone fica numa segunda linha reservada, à direita. `Enter` ou GO abrem `takoboto.jp/?q=…&lang=por` em nova aba; `Esc` fecha primeiro a busca e só o `Esc` seguinte abre a saída. A busca fecha ao avançar;
+    - **Takoboto:** o ícone fica no canto inferior direito do cartão, na mesma linha de Responder/Não sei (ou Continuar/Chutei), **também no celular**.
+      - O clique abre um **balão** compacto que nasce do ícone, só com o campo ("Palavra em japonês") e o GO à direita, centralizados na vertical, com 10 px de margem interna uniforme. Uma seta aponta para o ícone. Não há título, ícone, dica de teclado nem linha decorativa dentro do balão.
+      - O balão abre com uma escala curta a partir da seta (0,26 s, com leve "pulo") e fecha ao contrário (0,2 s). Com `prefers-reduced-motion`, só aparece e some.
+      - O balão flutua **sobre** as alternativas (ou o feedback) e abre para cima, deixando o enunciado à vista. Se não houver espaço acima do ícone na tela, abre para baixo. Nada na linha das ações se move, e o cartão não muda de altura.
+      - `Enter` ou GO abrem `takoboto.jp/?q=…&lang=por` em nova aba. `Esc`, um clique fora ou um novo clique no ícone fecham. O primeiro `Esc` fecha o balão, e só o seguinte abre a saída. Ao avançar de questão, o balão fecha e o campo volta vazio.
+      - **Posição avaliada (26/11/2026):** o ícone centralizado no cabeçalho do cartão foi testado e descartado. No celular ele colide com as etiquetas, e o balão cobria justamente o enunciado onde está a palavra a pesquisar. No centro da linha das ações não cabe: no celular, Responder e Não sei já passam do meio do cartão.
+      - Abaixo de 360 px os botões da linha ficam um pouco mais estreitos (14 px de margem interna; 12 px abaixo de 340 px), para Responder, Não sei e o ícone, ou "Ver resultado", Chutei e o ícone, caberem numa linha só, inclusive em 320 px;
     - ChatGPT, tags e Chutei.
   - **Katsuyou:** composição **centralizada**: o grupo como etiqueta no topo; o verbo grande em Mincho com furigana (38 px no celular, até 54 px), a tradução logo abaixo, o rótulo **Forma pedida** com a forma numa pílula, e o campo `.tin` centralizado. Responder (primário) com Dica e Não sei (fantasmas) centralizados. O feedback continua em linhas rotuladas ("Sua resposta", "Resposta correta", "Como chegar", "Regra utilizada"…). A identidade visual é a mesma do Bunpou, mas as telas não são cópias: cada uma serve ao seu tipo de exercício.
   - **Erros recentes (Katsuyou):** cabeçalho fixo, só a lista rola (`.err-scroll`), e **Revisar todos** e **Voltar** ficam sempre visíveis no rodapé (`.err-actions`).
@@ -129,7 +151,7 @@ Verificado com capturas reais (Chromium/Brave headless) em 320, 360, 390, 430, 7
 |---|---|
 | ≤ 760 px | o ramo sai; os cartões de modo ficam em coluna |
 | ≤ 640 px | Ajustes vira ⚙ na barra; o subtítulo do nome some |
-| ≤ 600 px (Bunpou, cartão da questão) | o Takoboto passa para uma segunda linha reservada, à direita, abaixo das ações |
+| ≤ 360 px (Bunpou, cartão da questão) | botões da linha de ações com margem interna menor, para o ícone do Takoboto caber na mesma linha |
 | ≤ 560 px | os números do acompanhamento viram grade de 3 colunas; Tema e Dados empilham; cartões de configuração com 16 px de margem interna |
 | ≤ 430 px (Bunpou, durante a sessão) | o nome cede espaço ao relógio; o selo fica |
 
@@ -137,6 +159,6 @@ Barra superior verificada também por medição automática em 320, 390, 768, 12
 
 Rodada de 26/11/2026, medida em 320, 360, 390, 768, 1024, 1280 e 1440 px, claro e escuro, nos dois apps:
 - sem rolagem horizontal;
-- Takoboto dentro do cartão, na linha das ações, com o ícone e Responder parados ao abrir e a altura do cartão inalterada;
+- Takoboto dentro do cartão, na linha das ações, com o ícone e Responder parados ao abrir e a altura do cartão inalterada. Desde a mesma data, o balão fica dentro da tela e a seta aponta para o ícone, antes e depois de responder;
 - verbo do Katsuyou, campo e cartão no mesmo eixo central;
 - diálogos sem sombra nem contorno, com a mesma largura nos dois estados.

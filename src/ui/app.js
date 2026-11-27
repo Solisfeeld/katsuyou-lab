@@ -63,7 +63,7 @@ export class App {
          confirma o SELECIONADO — mesmo comportamento do Bunpou Lab. Na fase
          de captura, para que nada chegue aos atalhos da tela por baixo. */
       document.addEventListener('keydown', e => {
-        if (!this.dialog || e.isComposing || e.keyCode === 229) return;
+        if (!this.dialog || this.dialog.kind === 'choice' || e.isComposing || e.keyCode === 229) return;
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') {
           e.preventDefault(); e.stopPropagation();
           this.dialogSel = this.dialogSel === 'ok' ? 'cancel' : 'ok';
@@ -74,7 +74,11 @@ export class App {
         }
       }, true);
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && this.dialog) { e.preventDefault(); this.closeDialog(); return; }
+        if (e.key === 'Escape' && this.dialog) {
+          e.preventDefault();
+          if (this.dialog.kind === 'choice') this.cancelChoice(); else this.closeDialog();
+          return;
+        }
         if (e.key === 'Escape' && this.acctOpen) { this.acctOpen = false; this.render(); return; }
         /* Esc na tela de exercício = o mesmo "Encerrar sessão": pergunta antes.
            Durante a composição do IME, Esc é do IME e não chega aqui. */
@@ -304,6 +308,64 @@ export class App {
     this.dialogSel = 'ok';                    // abre com a ação selecionada
     this.render();
   }
+  /* ---------------- janela de escolha (sincronização) ----------------
+     Mesmo componente do Bunpou Lab (choiceModal em bunpou-lab/src/auth-sync.js):
+     mesma marcação (.modal.modal-choice, .mc-main, .mc-foot), mesmos textos e
+     a mesma ordem. As escolhas ficam lado a lado com a mesma largura; com três
+     botões, "Cancelar" fica sozinho abaixo. Esc = clicar em Cancelar. Ao
+     clicar, a janela fecha, a ação roda e a tela é redesenhada — nessa ordem,
+     para que uma ação que abre outra janela (Manter → confirmar) funcione.
+     Enquanto a janela está aberta, o relógio da sessão pausa (this.dialog). */
+  askChoice({ title, body, buttons }) {
+    this.dialog = { kind: 'choice', title, body, buttons };
+    this.render();
+  }
+  runChoice(b) {
+    this.dialog = null;
+    try { b && b.run && b.run(); } catch (e) { console.error(e); }
+    this.render();
+  }
+  cancelChoice() {
+    const d = this.dialog;
+    const c = d && d.kind === 'choice' && d.buttons.find(b => b.label === 'Cancelar');
+    if (c) this.runChoice(c);
+  }
+
+  /* Conflito de sincronização: a MESMA janela do Bunpou Lab. Abre sozinha
+     quando o conflito surge (auth-sync.js → enterConflict) e pelo botão
+     "Resolver conflito" (popover da conta e Ajustes), quantas vezes for
+     preciso enquanto o conflito estiver pendente. As escolhas chamam as
+     funções existentes: keepRemote (nuvem) e keepLocal (este dispositivo,
+     depois da confirmação). Cancelar não resolve nem descarta nada. */
+  openConflict() {
+    const sync = this.sync();
+    if (!sync || sync.status !== 'conflict') return;
+    const rev = sync.conflictRevision;
+    this.acctOpen = false;
+    this.askChoice({
+      title: 'Há mudanças mais recentes em outro dispositivo',
+      body: 'Este dispositivo tem alterações que não foram enviadas, e a nuvem já mudou' +
+        (rev ? ` (revisão ${rev})` : '') + '. Nada foi descartado — escolha qual versão manter.',
+      buttons: [
+        { label: 'Cancelar' },
+        { label: 'Manter deste dispositivo', run: () => this.confirmKeepLocal() },
+        { label: 'Usar versão da nuvem', kind: 'btn-primary', run: () => { try { sync.keepRemote(); } catch {} } }
+      ]
+    });
+  }
+  confirmKeepLocal() {
+    const sync = this.sync();
+    if (!sync || sync.status !== 'conflict') return;
+    this.askChoice({
+      title: 'Substituir a versão da nuvem?',
+      body: 'O progresso do outro dispositivo será substituído pelo deste. Isso não pode ser desfeito.',
+      buttons: [
+        { label: 'Cancelar' },
+        { label: 'Substituir', kind: 'btn-shu', run: () => { try { sync.keepLocal(); } catch {} } }
+      ]
+    });
+  }
+
   closeDialog(run) {
     const d = this.dialog;
     this.dialog = null;
@@ -313,6 +375,25 @@ export class App {
   dialogNode() {
     const d = this.dialog;
     if (!d) return null;
+    if (d.kind === 'choice') {
+      const main = h('div', { class: 'mc-main' });
+      const foot = h('div', { class: 'mc-foot' });
+      d.buttons.forEach(b => {
+        const el = h('button', {
+          type: 'button', class: 'btn ' + (b.kind || '') + (b.kind ? ' mc-pri' : ''),
+          onclick: () => this.runChoice(b)
+        }, b.label);
+        (b.label === 'Cancelar' && d.buttons.length >= 3 ? foot : main).appendChild(el);
+      });
+      return h('div', { class: 'overlay show' },
+        h('div', { class: 'modal modal-choice', role: 'alertdialog', 'aria-modal': 'true' },
+          h('h3', { text: d.title }),
+          h('p', { text: d.body }),
+          main,
+          foot.children.length ? foot : null
+        )
+      );
+    }
     const sel = this.dialogSel || 'ok';
     const okBtn = h('button', {
       class: `btn ${d.danger ? 'btn-shu' : 'btn-primary'}${sel === 'ok' ? ' msel' : ''}`, 'data-dialog': 'ok',
@@ -534,11 +615,11 @@ export class App {
         onclick: () => { this.acctOpen = false; try { sync.login(); } catch {} this.render(); }
       }, 'Entrar novamente com Google'));
     } else if (sync.status === 'conflict') {
-      /* As duas opções e suas consequências ficam em Ajustes, escritas
-         por extenso — o popover só leva até lá (§4). */
+      /* Abre a janela de resolução por cima da tela atual — como no
+         Bunpou Lab. Nada de ir para Ajustes. */
       pop.appendChild(h('button', {
-        class: 'btn btn-shu',   /* como no Bunpou Lab */
-        onclick: () => this.go('settings')
+        class: 'btn btn-shu',
+        onclick: e => { e.stopPropagation(); this.openConflict(); }
       }, 'Resolver conflito'));
     } else {
       pop.appendChild(h('button', {
@@ -767,41 +848,24 @@ function accountSection(app) {
     'O progresso desta conta acompanha você em qualquer navegador em que entrar.'
   ));
 
-  /* Conflito é excepcional: as duas escolhas aparecem aqui, com as
-     consequências escritas. Nada é resolvido em silêncio.
-     Apresentação no padrão do diálogo de conflito do Bunpou Lab
-     (.modal-choice): título forte em Mincho, texto explicativo e as duas
-     escolhas lado a lado, com a mesma largura — secundária (este
-     dispositivo) à esquerda, principal (nuvem) à direita —, cada uma com o
-     efeito escrito logo abaixo. No celular empilham, com a principal em
-     cima. Só a aparência mudou: rótulos e ações são os mesmos. */
+  /* Conflito: aqui só se informa. A resolução é a mesma janela do Bunpou
+     Lab, aberta pelo botão "Resolver conflito" logo abaixo. */
   if (status === 'conflict') {
-    const box = h('div', { class: 'conflict-panel', role: 'group', 'aria-labelledby': 'conflict-title' });
-    box.appendChild(h('h3', { id: 'conflict-title', text: 'Há progresso diferente neste dispositivo e na sua conta.' }));
-    box.appendChild(h('p', { class: 'cp-lead', text: 'Escolha qual versão manter. Nada é substituído sem a sua escolha.' }));
-    const opts = h('div', { class: 'cp-choices' });
-    opts.appendChild(h('div', { class: 'cp-opt' },
-      h('button', {
-        class: 'btn', type: 'button',
-        onclick: () => { try { sync.keepLocal(); } catch {} app.render(); }
-      }, 'Usar progresso deste dispositivo'),
-      h('p', { class: 'cp-note', text: 'O progresso deste dispositivo será enviado para a sua conta.' })
-    ));
-    opts.appendChild(h('div', { class: 'cp-opt cp-pri' },
-      h('button', {
-        class: 'btn btn-primary', type: 'button',
-        onclick: () => { try { sync.keepRemote(); } catch {} app.render(); }
-      }, 'Usar progresso da nuvem'),
-      h('p', { class: 'cp-note', text: 'O progresso salvo na conta substituirá o deste dispositivo.' })
-    ));
-    box.appendChild(opts);
-    card.appendChild(box);
+    card.appendChild(h('p', { class: 'conflict-note' },
+      h('b', { text: 'Há progresso diferente neste dispositivo e na sua conta.' }),
+      ' Nada é substituído sem a sua escolha.'));
   }
 
   /* "Sincronizar agora" NÃO se repete aqui: a ação manual mora só no
      controle de conta da topbar, para não haver duas interfaces fazendo
      exatamente a mesma coisa. */
   const acoes = h('div', { class: 'row', style: { marginTop: '14px' } });
+  if (status === 'conflict') {
+    acoes.appendChild(h('button', {
+      class: 'btn btn-shu',
+      onclick: () => app.openConflict()
+    }, 'Resolver conflito'));
+  }
   if (status === 'auth-required') {
     acoes.appendChild(h('button', {
       class: 'btn btn-primary',

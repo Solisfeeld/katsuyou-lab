@@ -201,23 +201,27 @@ test('"Sincronizar agora" usa a infraestrutura existente', () => {
   assert.equal(sync.calls.syncNow, 1);
 });
 
-test('em conflito o popover encaminha para Ajustes, onde estão as duas opções', () => {
+test('em conflito, "Resolver conflito" do popover abre a janela sobre a página atual', () => {
   reset();
-  const sync = stubSync({ status: 'conflict', user: GOOGLE_USER });
+  const sync = stubSync({ status: 'conflict', user: GOOGLE_USER, conflictRevision: 12 });
   app.go('home');
   top('account').click();
   const btn = [...root.querySelectorAll('.acct-pop button')]
     .find(b => b.textContent.trim() === 'Resolver conflito');
   assert.ok(btn);
+  assert.ok(btn.classList.contains('btn-shu'));
   btn.click();
 
-  assert.equal(app.view, 'settings');
-  assert.ok(text().includes('Há progresso diferente neste dispositivo e na sua conta.'));
-  assert.ok([...root.querySelectorAll('button')].some(b => b.textContent.trim() === 'Usar progresso deste dispositivo'));
-  assert.ok([...root.querySelectorAll('button')].some(b => b.textContent.trim() === 'Usar progresso da nuvem'));
+  assert.equal(app.view, 'home', 'não redireciona para Ajustes');
+  assert.equal(root.querySelector('.acct-pop'), null, 'o popover fechou');
+  const m = root.querySelector('.overlay.show .modal-choice');
+  assert.ok(m, 'a janela abriu');
+  assert.ok(m.textContent.includes('Há mudanças mais recentes em outro dispositivo'));
+  assert.ok(m.textContent.includes('(revisão 12)'));
   /* Nada foi resolvido por conta própria. */
   assert.equal(sync.calls.keepLocal, 0);
   assert.equal(sync.calls.keepRemote, 0);
+  app.dialog = null;
 });
 
 test('sessão expirada oferece entrar novamente', () => {

@@ -150,10 +150,19 @@ Na interface (*Configurações → Conta e sincronização*):
 | `offline` | Sem conexão; o progresso continua salvo no dispositivo |
 | `error` | Não foi possível sincronizar agora |
 | `auth-required` | Sessão expirada; entrar novamente |
-| `conflict` | Escolha entre **Usar progresso deste dispositivo** e **Usar progresso da nuvem** |
+| `conflict` | Aviso de conflito + **Resolver conflito**, que abre a janela de resolução |
 
 Conflito nunca é resolvido em silêncio: quando as duas pontas mudaram, o app
-para e pergunta. **Sair** encerra a sessão do Identity e não apaga nada do
+para e pergunta, com a **mesma janela do Bunpou Lab**: "Há mudanças mais
+recentes em outro dispositivo", com a revisão da nuvem.
+- **Manter deste dispositivo** pede confirmação ("Substituir a versão da
+  nuvem?") antes de enviar o progresso deste dispositivo (`keepLocal`).
+- **Usar versão da nuvem** adota o progresso da conta (`keepRemote`).
+- **Cancelar** ou `Esc` fecham sem resolver nada.
+
+A janela abre sozinha quando o conflito surge. Enquanto ele estiver pendente,
+**Resolver conflito** (no controle da conta e em Ajustes) a reabre sobre a
+tela atual. **Sair** encerra a sessão do Identity e não apaga nada do
 progresso local.
 
 Sem Identity ou sem banco, o site continua inteiro: o progresso fica no

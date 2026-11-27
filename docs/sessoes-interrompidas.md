@@ -55,7 +55,7 @@ Ao retomar, `startedAt = agora − tempo salvo`. Exemplo: 23:15 de sessão, dois
 
 **Outros dispositivos:**
 - O treino salvo vive no mesmo estado do progresso (`resume`) desde a versão anterior, então acompanha a sincronização e pode ser retomado em outro dispositivo.
-- Um conflito entre dispositivos cai no fluxo de conflito que já existia (escolher local ou nuvem).
+- Um conflito entre dispositivos cai no fluxo de conflito que já existia: a janela de resolução, igual à do Bunpou Lab, com as opções manter local ou usar a nuvem. Com a janela aberta, o relógio da sessão pausa, como com qualquer diálogo.
 - Login e sincronização reais não foram exercitados nos testes.
 
 **Compatibilidade.** Treinos salvos no formato antigo (v1, só a fila) continuam retomáveis.

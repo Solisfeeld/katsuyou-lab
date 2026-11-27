@@ -262,13 +262,18 @@ test('"Sincronizar agora" existe só no controle de conta da topbar', () => {
   assert.equal(total.length, 1, 'há mais de um "Sincronizar agora" na tela');
 });
 
-test('o conflito continua resolvível pelos Ajustes', () => {
+test('o conflito continua resolvível pelos Ajustes (pela janela de resolução)', () => {
   reset();
-  const sync = stubSync({ status: 'conflict' });
+  let local = 0;
+  const sync = stubSync({ status: 'conflict', keepLocal() { local++; } });
   app.go('settings');
   assert.ok(text().includes('Há progresso diferente neste dispositivo e na sua conta.'));
-  btnByText('Usar progresso deste dispositivo').click();
+  btnByText('Resolver conflito').click();
+  btnByText('Manter deste dispositivo').click();
+  btnByText('Substituir').click();
+  assert.equal(local, 1);
   assert.equal(sync.calls.syncNow, 0, 'conflito não usa o caminho de sincronizar agora');
+  app.dialog = null;
 });
 
 test('o ajuste de mostrar o grupo existe só em Ajustes', () => {

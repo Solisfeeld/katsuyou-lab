@@ -152,6 +152,15 @@ function setStatus(next) {
   queueMicrotask(renderApp);
 }
 
+/* Conflito: guarda a versão da nuvem e abre a janela de resolução — o mesmo
+   fluxo do Bunpou Lab (enterConflict). A janela só lê o estado; as escolhas
+   continuam sendo api.keepLocal/api.keepRemote, sem nada automático. */
+function enterConflict(remote) {
+  sync.conflict = remote;
+  setStatus('conflict');
+  queueMicrotask(() => { try { window.KatsuyouApp?.openConflict?.(); } catch {} });
+}
+
 /* ---------------- rede ---------------- */
 async function pull() {
   const res = await fetch(ENDPOINT, { method: 'GET', headers: { accept: 'application/json' } });
@@ -223,8 +232,7 @@ async function initialSync(user) {
     }
     if (remoteNewer && meta.dirty) {
       /* Duas pontas mudaram: o usuário decide, nada é sobrescrito sozinho. */
-      setStatus('conflict');
-      sync.conflict = remote;
+      enterConflict(remote);
       return;
     }
     await pushNow(user, local, Number(remote.revision));
@@ -239,7 +247,7 @@ async function pushNow(user, progress, baseRevision) {
   try {
     const out = await push(progress, baseRevision);
     if (!out) return;
-    if (out.conflict) { sync.conflict = out; setStatus('conflict'); return; }
+    if (out.conflict) { enterConflict(out); return; }
     patchMeta(user.id, { revision: Number(out.revision), lastSyncedAt: Date.now(), dirty: false });
     setStatus('synced');
   } catch {
@@ -268,6 +276,12 @@ const api = {
   /* false enquanto a sessão ainda está sendo restaurada: a UI não deve
      concluir "deslogado" antes disso. */
   get authReady() { return sync.authReady; },
+  /* Revisão da versão da nuvem em conflito (só leitura, para o texto da
+     janela de resolução); null fora de conflito ou sem número válido. */
+  get conflictRevision() {
+    const r = sync.conflict ? Number(sync.conflict.revision) : NaN;
+    return Number.isFinite(r) && r > 0 ? r : null;
+  },
 
   notifyLocalChange() {
     if (!isValidUser(sync.user)) return;

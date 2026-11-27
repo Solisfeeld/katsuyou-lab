@@ -380,7 +380,7 @@ export class App {
       const foot = h('div', { class: 'mc-foot' });
       d.buttons.forEach(b => {
         const el = h('button', {
-          type: 'button', class: 'btn ' + (b.kind || '') + (b.kind ? ' mc-pri' : ''),
+          type: 'button', class: 'btn ' + (b.kind || 'btn-ghost') + (b.kind ? ' mc-pri' : ''),
           onclick: () => this.runChoice(b)
         }, b.label);
         (b.label === 'Cancelar' && d.buttons.length >= 3 ? foot : main).appendChild(el);

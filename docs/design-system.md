@@ -106,10 +106,15 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
       - Cancelar e `Esc` fecham sem resolver nem descartar nada.
     - O fundo é o mesmo `.overlay` dos outros diálogos (escurecido com desfoque de 3 px). Não há animação de entrada, nos dois apps.
     - Com a janela aberta, o relógio da sessão pausa (Bunpou: `.overlay.show`; Katsuyou: `this.dialog`).
-    - Título forte em Mincho (23 px, espaçamento entre letras normal) e texto de 14,5 px.
+    - **Tamanho compacto, o mesmo do diálogo `.modal` de antes:**
+      - até 440 px de largura (cerca de 289 px de altura no desktop);
+      - margem interna de 26/26/22 px (22/18/18 px abaixo de 420 px);
+      - título em Mincho de 20 px, com espaçamento normal entre letras, e texto de 14 px;
+      - botões padrão de 42 px. Manter e Cancelar usam `btn-ghost`, como antes.
+    - Medido em 26/11/2026 contra a versão anterior a `ca0aec9`: largura, altura, margens e tipografia são idênticas. Só a organização dos botões mudou.
     - As escolhas ficam lado a lado, com a mesma largura: secundária à esquerda e principal (primária ou destrutiva) à direita.
     - **Cancelar** fica sozinho abaixo, à direita.
-    - Abaixo de 480 px as escolhas empilham com a principal em cima, e Cancelar vira um botão fantasma de largura total, por último.
+    - Abaixo de 420 px as escolhas empilham, com a principal em cima. Cancelar continua abaixo, à direita.
     - `Esc` equivale a clicar em Cancelar. Setas e Enter não alternam a seleção aqui; isso é só do diálogo de confirmação abaixo.
   - **Diálogo de confirmação, teclado igual nos dois:** o diálogo abre com a ação (Sair, Descartar…) selecionada; setas e Tab alternam; Enter confirma o **selecionado**; Esc cancela; os atalhos da tela por baixo ficam bloqueados.
   - **Mesmos botões da seção Dados dos Ajustes:** Continuar é **secundário** (como Exportar e Importar progresso) e Sair é **destrutivo** (como Resetar progresso).

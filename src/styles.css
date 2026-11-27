@@ -698,6 +698,46 @@ html[data-theme="dark"] .session-go{color:#1f3b44;}
   .mc-main{grid-template-columns:1fr;}
   .mc-main .mc-pri{order:-1;}
 }
+/* janela de sincronização (definitiva, nov/2026): "Conflito de sincronização"
+   e "Substituir a versão da nuvem?". Bunpou → syncDialog em src/auth-sync.js;
+   Katsuyou → askSync em src/ui/app.js; mesma marcação nos dois. Compacta
+   (até 430 px), sem o fio sakura do topo, título na fonte da interface.
+   Escolhas = dois cartões iguais (ícone, título, descrição), sem favorito.
+   Rodapé: divisor, Cancelar à esquerda e, à direita, o aviso de segurança
+   (conflito) ou a ação destrutiva (confirmação). Hover e seleção pelo
+   teclado (.msel) têm a MESMA aparência: só o fundo muda de tom — sem anel,
+   contorno, brilho, sombra ou mudança de tamanho. */
+.modal.sc-modal{max-width:430px;padding:20px 20px 16px;border-radius:16px;}
+.modal.sc-modal::before{display:none;}
+.sc-modal h3{font-family:inherit;font-size:19px;font-weight:700;line-height:1.3;letter-spacing:normal;color:var(--ink);margin:0 0 8px;}
+.sc-modal p{font-size:13.5px;line-height:1.6;color:var(--ink-soft);margin:0 0 16px;}
+.sc-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sc-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-width:0;
+  padding:16px 10px 14px;border:1px solid var(--line-strong);border-radius:12px;background:var(--card);color:var(--ink);
+  font:inherit;text-align:center;cursor:pointer;transition:background .15s var(--ease),border-color .15s var(--ease);}
+.sc-card svg{width:20px;height:20px;color:var(--ink-soft);margin-bottom:6px;flex:none;}
+.sc-card b{font-size:15.5px;font-weight:700;line-height:1.3;}
+.sc-card span{font-size:13px;line-height:1.4;color:var(--ink-soft);}
+.sc-card.msel{background:var(--btn-sec-hover);border-color:var(--btn-sec-line);}
+/* o "hover" aqui é a própria seleção (.msel), que segue o mouse quando ele
+   se MOVE: um botão que surge sob um ponteiro parado não acende nem recebe
+   o foco (Enter acidental). Por isso o :hover puro não pinta nada. */
+.sc-modal .btn:not(.msel):hover{background:var(--btn-sec);border-color:var(--btn-sec-line);color:var(--ink);}
+.sc-modal .btn-shu:not(.msel):hover{background:var(--btn-danger);border-color:var(--btn-danger);color:var(--btn-danger-ink);}
+.sc-card:focus,.sc-card:focus-visible{outline:none;box-shadow:none;}
+.sc-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;
+  margin-top:18px;padding-top:14px;border-top:1px solid var(--line);}
+.sc-foot .btn{min-height:40px;padding:8px 16px;}
+.sc-safe{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:13px;color:var(--ink-faint);}
+.sc-safe svg{width:15px;height:15px;flex:none;}
+@media (max-width:400px){
+  .modal.sc-modal{padding:18px 16px 14px;}
+  .sc-modal h3{font-size:18px;}
+  .sc-card{padding:14px 8px 12px;}
+  .sc-card b{font-size:15px;}
+  .sc-card span{font-size:12.5px;}
+  .sc-safe{font-size:12.5px;}
+}
 
 /* ---- tela de exercício: a composição do Bunpou Lab, usada pelos dois ----
    barra de sessão → cabeçalho da etapa → cartão (etiquetas, enunciado,

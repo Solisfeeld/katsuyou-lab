@@ -95,27 +95,39 @@ Definidos em `:root` e em `html[data-theme="dark"]`, **idênticos nos dois apps*
   - Trio de ações de tamanho idêntico (`.btn-trio`): Exportar, Importar e Resetar progresso. Empilhado no celular; Resetar mantém a cor de alerta e a confirmação.
   - Campos numéricos (`.numin`).
   - Diálogo de confirmação (`.overlay`/`.modal`/`.modal-act`), com ações empilhadas abaixo de 420 px. O Katsuyou passou a usar o mesmo diálogo do Bunpou, em vez do `confirm()` do navegador.
-  - **Janela de escolha da sincronização (os dois apps):** mesma marcação (`.modal.modal-choice`, `.mc-main`, `.mc-foot`), mesmo CSS (no bloco compartilhado), mesmos textos e mesmo comportamento.
-    - **Bunpou:** `choiceModal` em `src/auth-sync.js`. Três janelas: conflito entre dispositivo e nuvem, confirmação de substituir a nuvem e importação do perfil sem login.
-    - **Katsuyou:** `askChoice`/`openConflict` em `src/ui/app.js`, sobre as funções existentes `keepLocal` e `keepRemote` de `src/auth-sync.js`. Duas janelas: conflito e confirmação de substituir a nuvem. A importação do perfil sem login não existe no Katsuyou.
-    - **Conflito, nos dois:**
-      - a janela "Há mudanças mais recentes em outro dispositivo" abre sozinha quando o conflito surge, com a revisão real da nuvem no texto (sem número, se a revisão não for conhecida);
+  - **Janela de sincronização (definitiva, os dois apps):** "Conflito de sincronização" e "Substituir a versão da nuvem?".
+    - **Mesmo componente nos dois:** mesma marcação (`.modal.sc-modal`, `.sc-cards`/`.sc-card`, `.sc-foot`, `.sc-safe`), mesmo CSS (bloco compartilhado), mesmos ícones SVG, textos e teclado.
+    - **Onde está:**
+      - Bunpou: `syncDialog` em `src/auth-sync.js`;
+      - Katsuyou: `askSync`/`openConflict`/`syncDialogNode` em `src/ui/app.js`, sobre as funções existentes `keepLocal` e `keepRemote` de `src/auth-sync.js`.
+    - **Conflito:**
+      - título "Conflito de sincronização" e o texto "Há alterações neste dispositivo e na nuvem (revisão N). Escolha qual versão deseja manter.", com a revisão real da nuvem; sem revisão conhecida, sem número;
+      - duas escolhas em **cartões iguais**, sem favorito, e o cartão inteiro é o botão: **Dispositivo** (ícone de monitor com celular, "Manter progresso local") e **Nuvem** (ícone de nuvem, "Usar progresso da conta");
+      - rodapé com divisor, **Cancelar** (secundário) à esquerda e, à direita, escudo com "Nenhum dado descartado.".
+    - **Confirmação "Substituir a versão da nuvem?":** a mesma janela, sem cartões, com botões tradicionais no rodapé: **Cancelar** à esquerda e **Substituir** (destrutivo) à direita.
+    - **Fluxo, nos dois:**
+      - a janela abre sozinha quando o conflito surge;
       - **Resolver conflito**, no controle da conta e em Ajustes › Conta, a reabre sobre a tela atual, sem navegar, enquanto o conflito estiver pendente;
-      - "Manter deste dispositivo" passa pela confirmação "Substituir a versão da nuvem?";
-      - "Usar versão da nuvem" adota a nuvem;
-      - Cancelar e `Esc` fecham sem resolver nem descartar nada.
-    - O fundo é o mesmo `.overlay` dos outros diálogos (escurecido com desfoque de 3 px). Não há animação de entrada, nos dois apps.
-    - Com a janela aberta, o relógio da sessão pausa (Bunpou: `.overlay.show`; Katsuyou: `this.dialog`).
-    - **Tamanho compacto, o mesmo do diálogo `.modal` de antes:**
-      - até 440 px de largura (cerca de 289 px de altura no desktop);
-      - margem interna de 26/26/22 px (22/18/18 px abaixo de 420 px);
-      - título em Mincho de 20 px, com espaçamento normal entre letras, e texto de 14 px;
-      - botões padrão de 42 px. Manter e Cancelar usam `btn-ghost`, como antes.
-    - Medido em 26/11/2026 contra a versão anterior a `ca0aec9`: largura, altura, margens e tipografia são idênticas. Só a organização dos botões mudou.
-    - As escolhas ficam lado a lado, com a mesma largura: secundária à esquerda e principal (primária ou destrutiva) à direita.
-    - **Cancelar** fica sozinho abaixo, à direita.
-    - Abaixo de 420 px as escolhas empilham, com a principal em cima. Cancelar continua abaixo, à direita.
-    - `Esc` equivale a clicar em Cancelar. Setas e Enter não alternam a seleção aqui; isso é só do diálogo de confirmação abaixo.
+      - Dispositivo → confirmação → Substituir envia o progresso deste dispositivo;
+      - Nuvem adota o progresso da conta;
+      - Cancelar e `Esc` fecham sem resolver nem descartar nada;
+      - com a janela aberta, o relógio da sessão pausa (Bunpou: `.overlay.show`; Katsuyou: `this.dialog`).
+    - **Teclado e mouse:**
+      - o foco começa em **Cancelar**, então um Enter acidental não escolhe versão;
+      - setas e Tab/Shift+Tab percorrem Dispositivo → Nuvem → Cancelar (→ Substituir), e Enter ativa o selecionado;
+      - hover e seleção pelo teclado têm a **mesma** aparência (`.msel`): só o fundo muda de tom (`card → #EEE6DC`; no escuro `card → #2C2D37`; Substituir `#BF4A33 → #9E3824`), sem anel, contorno, brilho, sombra ou mudança de tamanho;
+      - a seleção segue o mouse **quando ele se move**. Um ponteiro parado onde a janela surge não acende nada nem tira o foco de Cancelar. Por isso o `:hover` puro não pinta nada nessa janela.
+    - **Dimensões, iguais nos dois apps (medidas em 26/11/2026):**
+      - largura máxima de 430 px, cantos de 16 px, sem o fio sakura do topo;
+      - título na fonte da interface (19 px; 18 px abaixo de 400 px) e texto de 13,5 px;
+      - cartões com ícone de 20 px, título de 15,5 px e descrição de 13 px; Cancelar com 40 px;
+      - 1280 e 768 px: 430 × 305 px, cartões de 189 × 102 px;
+      - 390 px: 335 × 312 px; 360 px: 305 × 334 px; 320 px: 265 × 362 px;
+      - os cartões ficam lado a lado em todas as larguras, de 110 px em 320 px; as descrições quebram em duas linhas, com a mesma altura nos dois cartões;
+      - em 320 e 360 px o aviso "Nenhum dado descartado." passa para a linha de baixo, alinhado à direita, sem corte;
+      - confirmação: 430 × 187 px no desktop.
+    - **Só no Bunpou:** a janela "Encontramos progresso salvo neste dispositivo" (importação do perfil sem login) continua no componente anterior (`choiceModal`, `.modal-choice`). Ela não é de conflito, e o Katsuyou não tem essa etapa.
+    - O fundo é o mesmo `.overlay` dos outros diálogos (escurecido, com desfoque de 3 px). Não há animação de entrada, nos dois apps.
   - **Diálogo de confirmação, teclado igual nos dois:** o diálogo abre com a ação (Sair, Descartar…) selecionada; setas e Tab alternam; Enter confirma o **selecionado**; Esc cancela; os atalhos da tela por baixo ficam bloqueados.
   - **Mesmos botões da seção Dados dos Ajustes:** Continuar é **secundário** (como Exportar e Importar progresso) e Sair é **destrutivo** (como Resetar progresso).
   - **Selecionado pelo teclado = hover do mouse.** A classe `.msel` reutiliza exatamente as regras de `:hover` (`.btn:hover,.modal .btn.msel{…}`): o fundo escurece (Sair `#BF4A33 → #9E3824`; Continuar `card → #EEE6DC`; no escuro `#EC7E67 → #D2654F` e `card → #2C2D37`).

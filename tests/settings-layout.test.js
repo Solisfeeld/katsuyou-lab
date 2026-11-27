@@ -178,7 +178,7 @@ test('o conflito continua resolvível dentro do card CONTA', () => {
   assert.ok(card.textContent.includes('Há progresso diferente neste dispositivo e na sua conta.'));
   assert.ok(inCard('Conta', 'Resolver conflito'));
   inCard('Conta', 'Resolver conflito').click();
-  const nuvem = [...root.querySelectorAll('.overlay.show .modal-choice button')].find(b => b.textContent.trim() === 'Usar versão da nuvem');
+  const nuvem = [...root.querySelectorAll('.overlay.show .sc-modal .sc-card')].find(b => b.querySelector('b').textContent === 'Nuvem');
   assert.ok(nuvem, 'a janela de resolução abriu');
   nuvem.click();
   assert.equal(sync.calls.keepRemote, 1);

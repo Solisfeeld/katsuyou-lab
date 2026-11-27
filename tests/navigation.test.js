@@ -269,7 +269,7 @@ test('o conflito continua resolvível pelos Ajustes (pela janela de resolução)
   app.go('settings');
   assert.ok(text().includes('Há progresso diferente neste dispositivo e na sua conta.'));
   btnByText('Resolver conflito').click();
-  btnByText('Manter deste dispositivo').click();
+  [...root.querySelectorAll('.sc-modal .sc-card')].find(c => c.querySelector('b').textContent === 'Dispositivo').click();
   btnByText('Substituir').click();
   assert.equal(local, 1);
   assert.equal(sync.calls.syncNow, 0, 'conflito não usa o caminho de sincronizar agora');

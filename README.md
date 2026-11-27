@@ -153,12 +153,12 @@ Na interface (*Configurações → Conta e sincronização*):
 | `conflict` | Aviso de conflito + **Resolver conflito**, que abre a janela de resolução |
 
 Conflito nunca é resolvido em silêncio: quando as duas pontas mudaram, o app
-para e pergunta, com a **mesma janela do Bunpou Lab**: "Há mudanças mais
-recentes em outro dispositivo", com a revisão da nuvem.
-- **Manter deste dispositivo** pede confirmação ("Substituir a versão da
-  nuvem?") antes de enviar o progresso deste dispositivo (`keepLocal`).
-- **Usar versão da nuvem** adota o progresso da conta (`keepRemote`).
-- **Cancelar** ou `Esc` fecham sem resolver nada.
+para e pergunta, com a **mesma janela do Bunpou Lab**: "Conflito de
+sincronização", com a revisão da nuvem e dois cartões iguais.
+- **Dispositivo** pede confirmação ("Substituir a versão da nuvem?") antes de
+  enviar o progresso deste dispositivo (`keepLocal`).
+- **Nuvem** adota o progresso da conta (`keepRemote`).
+- **Cancelar** (com o foco inicial) ou `Esc` fecham sem resolver nada.
 
 A janela abre sozinha quando o conflito surge. Enquanto ele estiver pendente,
 **Resolver conflito** (no controle da conta e em Ajustes) a reabre sobre a

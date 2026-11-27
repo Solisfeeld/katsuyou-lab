@@ -214,9 +214,9 @@ test('em conflito, "Resolver conflito" do popover abre a janela sobre a página 
 
   assert.equal(app.view, 'home', 'não redireciona para Ajustes');
   assert.equal(root.querySelector('.acct-pop'), null, 'o popover fechou');
-  const m = root.querySelector('.overlay.show .modal-choice');
+  const m = root.querySelector('.overlay.show .sc-modal');
   assert.ok(m, 'a janela abriu');
-  assert.ok(m.textContent.includes('Há mudanças mais recentes em outro dispositivo'));
+  assert.ok(m.textContent.includes('Conflito de sincronização'));
   assert.ok(m.textContent.includes('(revisão 12)'));
   /* Nada foi resolvido por conta própria. */
   assert.equal(sync.calls.keepLocal, 0);

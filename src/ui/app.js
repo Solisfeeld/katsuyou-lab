@@ -63,7 +63,27 @@ export class App {
          confirma o SELECIONADO — mesmo comportamento do Bunpou Lab. Na fase
          de captura, para que nada chegue aos atalhos da tela por baixo. */
       document.addEventListener('keydown', e => {
-        if (!this.dialog || this.dialog.kind === 'choice' || e.isComposing || e.keyCode === 229) return;
+        if (!this.dialog || e.isComposing || e.keyCode === 229) return;
+        /* Janela de sincronização: mesmo teclado do Bunpou (syncDialog). */
+        if (this.dialog.kind === 'sync') {
+          const items = this.syncItems();
+          if (!items.length) return;
+          const cancel = items.find(x => x.dataset.sc === 'cancel');
+          if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel.click(); return; }
+          if (['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault(); e.stopPropagation();
+            const i = items.indexOf(document.activeElement);
+            const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey);
+            const from = i < 0 ? items.indexOf(cancel) : i;
+            items[(from + (back ? -1 : 1) + items.length) % items.length].focus({ preventScroll: true });
+            return;
+          }
+          if (e.key === 'Enter') {
+            e.preventDefault(); e.stopPropagation();
+            if (!e.repeat) (items.includes(document.activeElement) ? document.activeElement : cancel).click();
+          }
+          return;
+        }
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') {
           e.preventDefault(); e.stopPropagation();
           this.dialogSel = this.dialogSel === 'ok' ? 'cancel' : 'ok';
@@ -76,7 +96,7 @@ export class App {
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && this.dialog) {
           e.preventDefault();
-          if (this.dialog.kind === 'choice') this.cancelChoice(); else this.closeDialog();
+          if (this.dialog.kind === 'sync') this.runSync(null); else this.closeDialog();
           return;
         }
         if (e.key === 'Escape' && this.acctOpen) { this.acctOpen = false; this.render(); return; }
@@ -308,62 +328,107 @@ export class App {
     this.dialogSel = 'ok';                    // abre com a ação selecionada
     this.render();
   }
-  /* ---------------- janela de escolha (sincronização) ----------------
-     Mesmo componente do Bunpou Lab (choiceModal em bunpou-lab/src/auth-sync.js):
-     mesma marcação (.modal.modal-choice, .mc-main, .mc-foot), mesmos textos e
-     a mesma ordem. As escolhas ficam lado a lado com a mesma largura; com três
-     botões, "Cancelar" fica sozinho abaixo. Esc = clicar em Cancelar. Ao
-     clicar, a janela fecha, a ação roda e a tela é redesenhada — nessa ordem,
-     para que uma ação que abre outra janela (Manter → confirmar) funcione.
+  /* ---------------- janela de sincronização ----------------
+     Mesmo componente do Bunpou Lab (syncDialog em bunpou-lab/src/auth-sync.js):
+     mesma marcação (.modal.sc-modal, .sc-cards/.sc-card, .sc-foot, .sc-safe),
+     mesmos ícones, textos e teclado. Cancelar começa com o foco; setas/Tab
+     percorrem as opções; Enter ativa a selecionada; Esc = Cancelar. Hover e
+     seleção pelo teclado têm a mesma aparência (.msel). Ao ativar: a janela
+     fecha, a ação roda e a tela é redesenhada — nessa ordem, para que uma
+     ação que abre outra janela (Dispositivo → confirmar) funcione.
      Enquanto a janela está aberta, o relógio da sessão pausa (this.dialog). */
-  askChoice({ title, body, buttons }) {
-    this.dialog = { kind: 'choice', title, body, buttons };
+  askSync(cfg) {
+    this.dialog = { kind: 'sync', ...cfg };
+    this.dialogFocus = null;
     this.render();
   }
-  runChoice(b) {
+  runSync(run) {
     this.dialog = null;
-    try { b && b.run && b.run(); } catch (e) { console.error(e); }
+    try { run && run(); } catch (e) { console.error(e); }
     this.render();
   }
-  cancelChoice() {
-    const d = this.dialog;
-    const c = d && d.kind === 'choice' && d.buttons.find(b => b.label === 'Cancelar');
-    if (c) this.runChoice(c);
+  syncItems() {
+    return [...this.root.querySelectorAll('.sc-modal [data-sc]')];
   }
 
-  /* Conflito de sincronização: a MESMA janela do Bunpou Lab. Abre sozinha
-     quando o conflito surge (auth-sync.js → enterConflict) e pelo botão
-     "Resolver conflito" (popover da conta e Ajustes), quantas vezes for
-     preciso enquanto o conflito estiver pendente. As escolhas chamam as
-     funções existentes: keepRemote (nuvem) e keepLocal (este dispositivo,
-     depois da confirmação). Cancelar não resolve nem descarta nada. */
+  /* Conflito de sincronização: abre sozinha quando o conflito surge
+     (auth-sync.js → enterConflict) e pelo botão "Resolver conflito" (popover
+     da conta e Ajustes), quantas vezes for preciso enquanto o conflito
+     estiver pendente. As escolhas chamam as funções existentes: keepRemote
+     (Nuvem) e keepLocal (Dispositivo, depois da confirmação). Cancelar não
+     resolve nem descarta nada. */
   openConflict() {
     const sync = this.sync();
     if (!sync || sync.status !== 'conflict') return;
     const rev = sync.conflictRevision;
     this.acctOpen = false;
-    this.askChoice({
-      title: 'Há mudanças mais recentes em outro dispositivo',
-      body: 'Este dispositivo tem alterações que não foram enviadas, e a nuvem já mudou' +
-        (rev ? ` (revisão ${rev})` : '') + '. Nada foi descartado — escolha qual versão manter.',
-      buttons: [
-        { label: 'Cancelar' },
-        { label: 'Manter deste dispositivo', run: () => this.confirmKeepLocal() },
-        { label: 'Usar versão da nuvem', kind: 'btn-primary', run: () => { try { sync.keepRemote(); } catch {} } }
-      ]
+    this.askSync({
+      title: 'Conflito de sincronização',
+      body: 'Há alterações neste dispositivo e na nuvem' + (rev ? ` (revisão ${rev})` : '') +
+        '. Escolha qual versão deseja manter.',
+      cards: [
+        { icon: 'device', title: 'Dispositivo', desc: 'Manter progresso local', run: () => this.confirmKeepLocal() },
+        { icon: 'cloud', title: 'Nuvem', desc: 'Usar progresso da conta', run: () => { try { sync.keepRemote(); } catch {} } }
+      ],
+      note: 'Nenhum dado descartado.'
     });
   }
   confirmKeepLocal() {
     const sync = this.sync();
     if (!sync || sync.status !== 'conflict') return;
-    this.askChoice({
+    this.askSync({
       title: 'Substituir a versão da nuvem?',
       body: 'O progresso do outro dispositivo será substituído pelo deste. Isso não pode ser desfeito.',
-      buttons: [
-        { label: 'Cancelar' },
-        { label: 'Substituir', kind: 'btn-shu', run: () => { try { sync.keepLocal(); } catch {} } }
-      ]
+      confirm: { label: 'Substituir', kind: 'btn-shu', run: () => { try { sync.keepLocal(); } catch {} } }
     });
+  }
+
+  syncDialogNode(d) {
+    const svg = inner => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + inner + '</svg>';
+    const ICON = {
+      device: svg('<path d="M14 15H4.5A1.5 1.5 0 0 1 3 13.5v-8A1.5 1.5 0 0 1 4.5 4h11A1.5 1.5 0 0 1 17 5.5V9"/>' +
+                  '<path d="M7.5 19H12M9.75 15v4"/><rect x="15" y="11" width="6" height="9" rx="1.3"/>'),
+      cloud: svg('<path d="M7 18.5h10.25a3.75 3.75 0 0 0 .4-7.48A5.5 5.5 0 0 0 7.1 9.6 4.45 4.45 0 0 0 7 18.5z"/>'),
+      shield: svg('<path d="M12 3.2 18.5 6v5.2c0 4.1-2.7 7.4-6.5 9.3-3.8-1.9-6.5-5.2-6.5-9.3V6z"/><path d="m9.2 12 2 2 3.6-3.8"/>')
+    };
+    const icon = k => { const t = document.createElement('template'); t.innerHTML = ICON[k]; return t.content.firstChild; };
+    const items = [];
+    const mk = (cls, kind, run, ...children) => {
+      const b = h('button', { type: 'button', class: cls, 'data-sc': kind, onclick: () => this.runSync(run) }, ...children);
+      items.push(b);
+      return b;
+    };
+    const cards = d.cards ? h('div', { class: 'sc-cards' }, d.cards.map(c =>
+      mk('sc-card', 'card', c.run, icon(c.icon),
+        h('b', { text: c.title }), h('span', { text: c.desc })))) : null;
+    const cancel = mk('btn', 'cancel', null, 'Cancelar');
+    const foot = h('div', { class: 'sc-foot' },
+      cancel,
+      d.note ? h('span', { class: 'sc-safe' }, icon('shield'), h('span', { text: d.note })) : null,
+      d.confirm ? mk('btn ' + (d.confirm.kind || ''), 'confirm', d.confirm.run, d.confirm.label) : null
+    );
+    const node = h('div', { class: 'overlay show' },
+      h('div', { class: 'modal sc-modal', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': 'sc-t', 'aria-describedby': 'sc-d' },
+        h('h3', { id: 'sc-t', text: d.title }),
+        h('p', { id: 'sc-d', text: d.body }),
+        cards,
+        foot
+      )
+    );
+    const select = el => items.forEach(i => i.classList.toggle('msel', i === el));
+    items.forEach((el, idx) => {
+      el.addEventListener('focus', () => { this.dialogFocus = idx; select(el); });
+      /* só com movimento real do mouse — como no Bunpou */
+      el.addEventListener('mousemove', e => {
+        if ((e.movementX || e.movementY) && document.activeElement !== el) { try { el.focus({ preventScroll: true }); } catch {} }
+      });
+    });
+    /* Foco inicial em Cancelar; num redesenho, volta para a opção que
+       estava selecionada. */
+    const alvo = items[this.dialogFocus ?? items.indexOf(cancel)] || cancel;
+    queueMicrotask?.(() => { try { alvo.focus({ preventScroll: true }); } catch {} });
+    return node;
   }
 
   closeDialog(run) {
@@ -375,25 +440,7 @@ export class App {
   dialogNode() {
     const d = this.dialog;
     if (!d) return null;
-    if (d.kind === 'choice') {
-      const main = h('div', { class: 'mc-main' });
-      const foot = h('div', { class: 'mc-foot' });
-      d.buttons.forEach(b => {
-        const el = h('button', {
-          type: 'button', class: 'btn ' + (b.kind || 'btn-ghost') + (b.kind ? ' mc-pri' : ''),
-          onclick: () => this.runChoice(b)
-        }, b.label);
-        (b.label === 'Cancelar' && d.buttons.length >= 3 ? foot : main).appendChild(el);
-      });
-      return h('div', { class: 'overlay show' },
-        h('div', { class: 'modal modal-choice', role: 'alertdialog', 'aria-modal': 'true' },
-          h('h3', { text: d.title }),
-          h('p', { text: d.body }),
-          main,
-          foot.children.length ? foot : null
-        )
-      );
-    }
+    if (d.kind === 'sync') return this.syncDialogNode(d);
     const sel = this.dialogSel || 'ok';
     const okBtn = h('button', {
       class: `btn ${d.danger ? 'btn-shu' : 'btn-primary'}${sel === 'ok' ? ' msel' : ''}`, 'data-dialog': 'ok',

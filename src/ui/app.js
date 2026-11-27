@@ -537,8 +537,7 @@ export class App {
       /* As duas opções e suas consequências ficam em Ajustes, escritas
          por extenso — o popover só leva até lá (§4). */
       pop.appendChild(h('button', {
-        class: 'btn',
-        style: { borderColor: 'var(--shu)', color: 'var(--shu)' },
+        class: 'btn btn-shu',   /* como no Bunpou Lab */
         onclick: () => this.go('settings')
       }, 'Resolver conflito'));
     } else {
@@ -769,22 +768,33 @@ function accountSection(app) {
   ));
 
   /* Conflito é excepcional: as duas escolhas aparecem aqui, com as
-     consequências escritas. Nada é resolvido em silêncio. */
+     consequências escritas. Nada é resolvido em silêncio.
+     Apresentação no padrão do diálogo de conflito do Bunpou Lab
+     (.modal-choice): título forte em Mincho, texto explicativo e as duas
+     escolhas lado a lado, com a mesma largura — secundária (este
+     dispositivo) à esquerda, principal (nuvem) à direita —, cada uma com o
+     efeito escrito logo abaixo. No celular empilham, com a principal em
+     cima. Só a aparência mudou: rótulos e ações são os mesmos. */
   if (status === 'conflict') {
-    const box = h('div', { class: 'notice', style: { marginTop: '14px' } });
-    box.appendChild(h('p', { style: { margin: '0 0 4px', fontWeight: '700' }, text: 'Há progresso diferente neste dispositivo e na sua conta.' }));
-    box.appendChild(h('p', { class: 'small', style: { margin: '0 0 12px' }, text: 'Escolha qual versão manter. Nada é substituído sem a sua escolha.' }));
-    box.appendChild(h('button', {
-      class: 'btn btn-block',
-      style: { marginBottom: '6px' },
-      onclick: () => { try { sync.keepLocal(); } catch {} app.render(); }
-    }, 'Usar progresso deste dispositivo'));
-    box.appendChild(h('p', { class: 'src-line', style: { margin: '0 0 12px' }, text: 'O progresso deste dispositivo será enviado para a sua conta.' }));
-    box.appendChild(h('button', {
-      class: 'btn btn-block',
-      onclick: () => { try { sync.keepRemote(); } catch {} app.render(); }
-    }, 'Usar progresso da nuvem'));
-    box.appendChild(h('p', { class: 'src-line', style: { margin: '0' }, text: 'O progresso salvo na conta substituirá o deste dispositivo.' }));
+    const box = h('div', { class: 'conflict-panel', role: 'group', 'aria-labelledby': 'conflict-title' });
+    box.appendChild(h('h3', { id: 'conflict-title', text: 'Há progresso diferente neste dispositivo e na sua conta.' }));
+    box.appendChild(h('p', { class: 'cp-lead', text: 'Escolha qual versão manter. Nada é substituído sem a sua escolha.' }));
+    const opts = h('div', { class: 'cp-choices' });
+    opts.appendChild(h('div', { class: 'cp-opt' },
+      h('button', {
+        class: 'btn', type: 'button',
+        onclick: () => { try { sync.keepLocal(); } catch {} app.render(); }
+      }, 'Usar progresso deste dispositivo'),
+      h('p', { class: 'cp-note', text: 'O progresso deste dispositivo será enviado para a sua conta.' })
+    ));
+    opts.appendChild(h('div', { class: 'cp-opt cp-pri' },
+      h('button', {
+        class: 'btn btn-primary', type: 'button',
+        onclick: () => { try { sync.keepRemote(); } catch {} app.render(); }
+      }, 'Usar progresso da nuvem'),
+      h('p', { class: 'cp-note', text: 'O progresso salvo na conta substituirá o deste dispositivo.' })
+    ));
+    box.appendChild(opts);
     card.appendChild(box);
   }
 
